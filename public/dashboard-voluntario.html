@@ -1,0 +1,599 @@
+﻿<!-- @build: 2026-06-30.11-00-00 | id: B25-VOLUNTARIO-FINAL-CONFIRMAR | desc: Dashboard Transportista con confirmación de recogida agregada sin quitar nada -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SOS Venezuela | Transportista</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+      --bg: #f8fafc; --card: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0;
+      --radius: 16px; --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); padding-bottom: 80px; }
+    .header { background: var(--card); padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 20px; font-weight: 700; color: var(--primary); }
+    .header h1 span { color: var(--accent); }
+    .header-actions { display: flex; gap: 12px; align-items: center; }
+    .icon-btn { background: var(--bg); border: 1px solid var(--border); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 16px; cursor: pointer; transition: all 0.2s; }
+    .icon-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+    .container { padding: 16px; max-width: 600px; margin: 0 auto; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: var(--card); padding: 16px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); text-align: center; }
+    .stat-value { font-size: 24px; font-weight: 700; color: var(--accent); }
+    .stat-label { font-size: 12px; color: var(--text-muted); }
+    .card { background: var(--card); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 16px; }
+    .card h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
+    input, select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 16px; font-family: inherit; background: white; }
+    input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 600; font-size: 16px; cursor: pointer; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-navigate { background: #1a73e8; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; margin-top: 8px; }
+    .search-box { position: relative; display: flex; gap: 8px; }
+    .search-box input { flex: 1; }
+    .search-box button { width: auto; }
+    .map { height: 250px; border-radius: var(--radius); margin-bottom: 16px; border: 1px solid var(--border); }
+    .entrega-item { background: var(--card); padding: 16px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 12px; }
+    .entrega-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: white; }
+    .badge-recogida { background: #f59e0b; }
+    .badge-distribucion { background: #3b82f6; }
+    .empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
+    .loading { text-align: center; padding: 20px; color: var(--text-muted); }
+    .mensaje { padding: 12px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; display: none; }
+    .mensaje.exito { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .mensaje.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); border: none; background: none; font-size: 10px; font-weight: 500; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+    .nav-item i { font-size: 20px; }
+    .nav-item.active { color: var(--accent); }
+    .alert-aviso { background: #fff3e0; border-left: 4px solid var(--accent); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #e65100; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>SOS <span>Venezuela</span></h1>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="actualizarUbicacionGPS()" title="Actualizar mi ubicación">
+        <i class="fa-solid fa-location-crosshairs"></i>
+      </button>
+      <button class="icon-btn" onclick="logout()" title="Cerrar sesión">
+        <i class="fa-solid fa-right-from-bracket"></i>
+      </button>
+      <div class="avatar" id="voluntario-avatar">VL</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="mensaje-global" class="mensaje"></div>
+
+    <!-- SECCIÓN INICIO -->
+    <div class="section active" id="section-inicio">
+      <div id="aviso-perfil" class="alert-aviso" style="display:none;">
+        ⚠️ Completa tu perfil de transporte para empezar a ayudar.
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-recolecciones">0</div>
+          <div class="stat-label">Recolecciones pendientes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-distribuciones">0</div>
+          <div class="stat-label">Distribuciones pendientes</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2><i class="fa-solid fa-id-card" style="color:var(--accent);"></i> Mi Perfil</h2>
+        <div id="perfil-info"><div class="loading">Cargando...</div></div>
+        <button class="btn btn-success" style="margin-top:12px;" onclick="mostrarSeccion('perfil')">
+          ⚙️ Editar Perfil
+        </button>
+      </div>
+      <div class="card">
+        <h2><i class="fa-solid fa-truck-fast" style="color:var(--accent);"></i> Mis Entregas Activas</h2>
+        <div id="lista-entregas"><div class="loading">Cargando...</div></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN RECOLECCIÓN -->
+    <div class="section" id="section-recoleccion">
+      <div class="card">
+        <h2><i class="fa-solid fa-hand-holding-heart" style="color:var(--danger);"></i> Donaciones por recoger</h2>
+        <div class="search-box" style="margin-bottom:12px;">
+          <input type="text" id="buscar-direccion-rec" placeholder="Buscar zona en Venezuela...">
+          <button class="btn btn-primary" onclick="buscarDireccion('rec')" style="width:auto;">🔎</button>
+        </div>
+        <div class="map" id="mapa-recoleccion"></div>
+        <div id="lista-recolecciones"><div class="loading">Cargando recolecciones...</div></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN DISTRIBUCIÓN -->
+    <div class="section" id="section-distribucion">
+      <div class="card">
+        <h2><i class="fa-solid fa-boxes-packing" style="color:var(--success);"></i> Despachos por distribuir</h2>
+        <div class="search-box" style="margin-bottom:12px;">
+          <input type="text" id="buscar-direccion-dis" placeholder="Buscar zona en Venezuela...">
+          <button class="btn btn-primary" onclick="buscarDireccion('dis')" style="width:auto;">🔎</button>
+        </div>
+        <div class="map" id="mapa-distribucion"></div>
+        <div id="lista-distribuciones"><div class="loading">Cargando despachos...</div></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN PERFIL -->
+    <div class="section" id="section-perfil">
+      <div class="card">
+        <h2><i class="fa-solid fa-user-gear" style="color:var(--accent);"></i> Datos de Transporte</h2>
+        <form id="form-perfil">
+          <div class="form-group">
+            <label>Nombre Completo</label>
+            <input type="text" id="perfil-nombre" required maxlength="100">
+          </div>
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="text" id="perfil-telefono" required inputmode="numeric" pattern="[0-9]{7,15}">
+          </div>
+          <div class="form-group">
+            <label>Tipo de Vehículo</label>
+            <select id="perfil-vehiculo" required>
+              <option value="moto">🏍️ Moto</option>
+              <option value="carro">🚗 Carro</option>
+              <option value="camioneta">🚛 Camioneta</option>
+              <option value="bicicleta">🚲 Bicicleta</option>
+              <option value="a_pie">🚶 A pie</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Capacidad de Carga (opcional)</label>
+            <input type="text" id="perfil-capacidad" placeholder="Ej: 100 kg">
+          </div>
+          <div class="form-group">
+            <label>Ubicación</label>
+            <button type="button" class="btn btn-primary" onclick="obtenerUbicacionGPS()">
+              📍 Usar mi ubicación actual
+            </button>
+            <input type="hidden" id="perfil-lat">
+            <input type="hidden" id="perfil-lon">
+            <p id="perfil-coords" style="font-size:12px;color:var(--text-muted);margin-top:6px;"></p>
+          </div>
+          <button type="submit" class="btn btn-success">💾 Guardar Perfil</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-section="inicio"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
+    <button class="nav-item" data-section="recoleccion"><i class="fa-solid fa-hand-holding-heart"></i><span>Recoger</span></button>
+    <button class="nav-item" data-section="distribucion"><i class="fa-solid fa-boxes-packing"></i><span>Distribuir</span></button>
+    <button class="nav-item" data-section="perfil"><i class="fa-solid fa-user"></i><span>Perfil</span></button>
+  </nav>
+
+  <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    if (!verificarSesion(['voluntario'])) throw new Error('Acceso denegado');
+
+    let perfilVoluntario = null;
+    let mapaRecoleccion = null;
+    let mapaDistribucion = null;
+    let marcadoresRec = [];
+    let marcadoresDis = [];
+
+    document.getElementById('voluntario-avatar').innerText = (perfil.nombre_punto || 'VL').substring(0, 2).toUpperCase();
+
+    // Actualizar ubicación GPS desde el header
+    async function actualizarUbicacionGPS() {
+      if (!navigator.geolocation) {
+        mostrarMensaje('GPS no soportado', 'error');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(async pos => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        try {
+          await apiFetch('/api/perfil', {
+            method: 'POST',
+            body: JSON.stringify({
+              rol: perfil.rol,
+              nombre: perfil.nombre_punto || perfil.nombre,
+              telefono: perfil.telefono || '',
+              lat: lat,
+              lon: lon
+            })
+          });
+          perfil.lat = lat;
+          perfil.lon = lon;
+          mostrarMensaje('📍 Ubicación actualizada', 'exito');
+          if (perfilVoluntario) {
+            perfilVoluntario.lat = lat;
+            perfilVoluntario.lon = lon;
+          }
+        } catch (e) {
+          mostrarMensaje('❌ Error al actualizar ubicación', 'error');
+        }
+      }, () => {
+        mostrarMensaje('No se pudo obtener la ubicación', 'error');
+      }, { enableHighAccuracy: true, timeout: 10000 });
+    }
+
+    // Logout
+    async function logout() {
+      if (confirm('¿Cerrar sesión?')) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('perfil');
+        window.location.href = '/login.html';
+      }
+    }
+
+    function mostrarSeccion(seccion) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('section-' + seccion).classList.add('active');
+      document.querySelector(`.nav-item[data-section="${seccion}"]`).classList.add('active');
+
+      if (seccion === 'inicio') cargarDatos();
+      if (seccion === 'recoleccion') initMapaRecoleccion();
+      if (seccion === 'distribucion') initMapaDistribucion();
+      if (seccion === 'perfil') cargarFormPerfil();
+    }
+
+    document.querySelectorAll('.nav-item').forEach(btn => {
+      btn.addEventListener('click', () => mostrarSeccion(btn.dataset.section));
+    });
+
+    async function cargarDatos() {
+      try {
+        const res = await apiFetch('/api/voluntarios/mi-perfil');
+        perfilVoluntario = res.data;
+        document.getElementById('aviso-perfil').style.display = 'none';
+        document.getElementById('perfil-info').innerHTML = `
+          <p><strong>${perfilVoluntario.nombre}</strong></p>
+          <p style="font-size:14px;color:var(--text-muted);">📞 ${perfilVoluntario.telefono} | 🚚 ${perfilVoluntario.tipo_vehiculo || 'No especificado'}</p>
+          <p style="font-size:14px;color:var(--text-muted);">Estado: ${perfilVoluntario.activo ? '🟢 Activo' : '🔴 Inactivo'}</p>
+        `;
+        cargarEntregas();
+        cargarConteoServicios();
+      } catch {
+        document.getElementById('aviso-perfil').style.display = 'block';
+        document.getElementById('perfil-info').innerHTML = '<p style="color:var(--text-muted);">Perfil no completado</p>';
+      }
+    }
+
+    function cargarFormPerfil() {
+      if (!perfilVoluntario) {
+        cargarDatos().then(() => { if (perfilVoluntario) rellenarFormulario(); });
+      } else {
+        rellenarFormulario();
+      }
+    }
+
+    function rellenarFormulario() {
+      document.getElementById('perfil-nombre').value = perfilVoluntario.nombre || '';
+      document.getElementById('perfil-telefono').value = perfilVoluntario.telefono || '';
+      document.getElementById('perfil-vehiculo').value = perfilVoluntario.tipo_vehiculo || 'moto';
+      document.getElementById('perfil-capacidad').value = perfilVoluntario.capacidad_carga || '';
+      if (perfilVoluntario.lat && perfilVoluntario.lon) {
+        document.getElementById('perfil-lat').value = perfilVoluntario.lat;
+        document.getElementById('perfil-lon').value = perfilVoluntario.lon;
+        document.getElementById('perfil-coords').innerText = `${perfilVoluntario.lat}, ${perfilVoluntario.lon}`;
+      } else {
+        document.getElementById('perfil-coords').innerText = 'No configurada';
+      }
+    }
+
+    async function cargarEntregas() {
+      const lista = document.getElementById('lista-entregas');
+      lista.innerHTML = '<div class="loading">Cargando...</div>';
+      try {
+        const res = await apiFetch('/api/entregas?voluntario=' + encodeURIComponent(perfilVoluntario.telefono));
+        const entregas = res.data || [];
+        if (entregas.length === 0) {
+          lista.innerHTML = '<div class="empty-state">No tienes entregas activas</div>';
+          return;
+        }
+
+        lista.innerHTML = entregas.map(e => {
+          const esRecoleccion = e.tipo_servicio === 'recoleccion';
+          const detalle = e.detalle;
+          const fecha = new Date(e.fecha_creacion).toLocaleString('es-VE');
+          const estado = e.estado.replace(/_/g, ' ');
+
+          let nombreDonante = 'No disponible';
+          let telefonoDonante = 'No disponible';
+          let direccion = 'No disponible';
+          let lat, lon;
+          let estadoDonacion = null;
+
+          if (esRecoleccion && detalle) {
+            nombreDonante = detalle.perfiles?.nombre_punto || 'Anónimo';
+            telefonoDonante = detalle.perfiles?.telefono || 'Sin teléfono';
+            direccion = detalle.direccion_recogida || 'Sin dirección';
+            lat = detalle.lat_recogida;
+            lon = detalle.lon_recogida;
+            estadoDonacion = detalle.estado;
+          } else if (!esRecoleccion && detalle) {
+            nombreDonante = detalle.punto || 'Destino';
+            telefonoDonante = 'N/A';
+            direccion = detalle.punto || 'Sin dirección';
+            lat = detalle.lat;
+            lon = detalle.lon;
+          }
+
+          const navegacion = lat && lon
+            ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}" target="_blank" class="btn btn-navigate"><i class="fa-solid fa-map-pin"></i> Navegar</a>`
+            : '';
+
+          // NUEVO: Botón de confirmar recogida si la donación está en estado 'asignada'
+          const botonConfirmar = (esRecoleccion && estadoDonacion === 'asignada')
+            ? `<button class="btn btn-success" style="margin-top:8px;" onclick="confirmarRecogida('${e.donacion_id}')">✅ Confirmar recogida</button>`
+            : '';
+
+          return `
+            <div class="entrega-item">
+              <div class="entrega-header">
+                <strong>${esRecoleccion ? 'Recolección' : 'Distribución'} #${e.id.substring(0,8)}</strong>
+                <span class="badge badge-${esRecoleccion ? 'recogida' : 'distribucion'}">${estado}</span>
+              </div>
+              <p style="font-size:13px;color:var(--text-muted);">👤 ${nombreDonante} | 📞 ${telefonoDonante}</p>
+              <p style="font-size:13px;color:var(--text-muted);">📍 ${direccion}</p>
+              <p style="font-size:12px;color:#94a3b8;">📅 ${fecha}</p>
+              ${navegacion}
+              ${botonConfirmar}
+            </div>
+          `;
+        }).join('');
+      } catch {
+        lista.innerHTML = '<div class="empty-state">Error al cargar entregas</div>';
+      }
+    }
+
+    // NUEVA FUNCIÓN: Confirmar recogida
+    window.confirmarRecogida = async function(donacionId) {
+      try {
+        const res = await apiFetch('/api/donaciones/' + donacionId + '/recoger', { method: 'PATCH' });
+        mostrarMensaje('✅ Recogida confirmada. Ahora puedes llevarlo al acopio.', 'exito');
+        cargarEntregas(); // Refrescar la lista
+      } catch (e) {
+        mostrarMensaje('❌ ' + e.message, 'error');
+      }
+    };
+
+    async function cargarConteoServicios() {
+      try {
+        const resRec = await apiFetch('/api/voluntarios/donaciones-pendientes');
+        document.getElementById('stat-recolecciones').innerText = (resRec.data || []).length;
+        const resDis = await apiFetch('/api/despachos/pendientes');
+        document.getElementById('stat-distribuciones').innerText = (resDis.data || []).length;
+      } catch {}
+    }
+
+    function getDefaultCoords() {
+      return {
+        lat: perfilVoluntario?.lat || 8.0,
+        lon: perfilVoluntario?.lon || -66.0,
+        zoom: perfilVoluntario?.lat ? 15 : 6
+      };
+    }
+
+    // MAPA RECOLECCIÓN
+    function initMapaRecoleccion() {
+      if (mapaRecoleccion) { mapaRecoleccion.invalidateSize(); return; }
+      const coords = getDefaultCoords();
+      mapaRecoleccion = L.map('mapa-recoleccion').setView([coords.lat, coords.lon], coords.zoom);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaRecoleccion);
+      cargarRecolecciones();
+    }
+
+    async function cargarRecolecciones() {
+      marcadoresRec.forEach(m => mapaRecoleccion.removeLayer(m));
+      marcadoresRec = [];
+      const lista = document.getElementById('lista-recolecciones');
+      lista.innerHTML = '<div class="loading">Cargando...</div>';
+      try {
+        const res = await apiFetch('/api/voluntarios/donaciones-pendientes');
+        const donaciones = res.data || [];
+        if (donaciones.length === 0) {
+          lista.innerHTML = '<div class="empty-state">No hay donaciones por recoger</div>';
+          return;
+        }
+        donaciones.forEach(d => {
+          if (d.lat_recogida && d.lon_recogida) {
+            const m = L.marker([d.lat_recogida, d.lon_recogida], {
+              icon: L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+              })
+            }).addTo(mapaRecoleccion)
+              .bindPopup(`<b>Recolección</b><br>${d.detalle_donacion?.map(i => i.cantidad + ' ' + (i.catalogo_insumos?.nombre_mostrar || 'Insumo')).join('<br>') || 'Sin detalles'}`);
+            marcadoresRec.push(m);
+          }
+        });
+        if (marcadoresRec.length > 0) mapaRecoleccion.fitBounds(L.featureGroup(marcadoresRec).getBounds().pad(0.1));
+
+        lista.innerHTML = donaciones.map(d => {
+          const enlaceNavegacion = d.lat_recogida && d.lon_recogida
+            ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${d.lat_recogida},${d.lon_recogida}" target="_blank" class="btn btn-navigate"><i class="fa-solid fa-map-pin"></i> Navegar</a>`
+            : '';
+          return `
+            <div class="entrega-item">
+              <strong>Recolección</strong><br>
+              <span style="font-size:13px;color:var(--text-muted);">${d.detalle_donacion?.map(i => i.cantidad + ' ' + (i.catalogo_insumos?.nombre_mostrar || 'Insumo')).join(', ') || 'Sin items'}</span><br>
+              <span style="font-size:12px;color:#94a3b8;">${d.direccion_recogida || 'Sin dirección'}</span><br>
+              <button class="btn btn-success" style="margin-top:8px;" onclick="tomarRecoleccion('${d.id}')">📦 Tomar recolección</button>
+              ${enlaceNavegacion}
+            </div>
+          `;
+        }).join('');
+      } catch {
+        lista.innerHTML = '<div class="empty-state">Error al cargar recolecciones</div>';
+      }
+    }
+
+    window.tomarRecoleccion = async function(donacionId) {
+      if (!perfilVoluntario) return alert('Complete su perfil primero');
+      try {
+        const res = await apiFetch('/api/entregas', {
+          method: 'POST',
+          body: JSON.stringify({
+            idempotencyKey: generarUUID(),
+            voluntario_telefono: perfilVoluntario.telefono,
+            donacion_id: donacionId,
+            tipo_servicio: 'recoleccion'
+          })
+        });
+        mostrarMensaje('✅ Recolección asignada. ID: ' + res.data.id, 'exito');
+        cargarRecolecciones();
+      } catch (e) {
+        mostrarMensaje('❌ ' + e.message, 'error');
+      }
+    };
+
+    // MAPA DISTRIBUCIÓN
+    function initMapaDistribucion() {
+      if (mapaDistribucion) { mapaDistribucion.invalidateSize(); return; }
+      const coords = getDefaultCoords();
+      mapaDistribucion = L.map('mapa-distribucion').setView([coords.lat, coords.lon], coords.zoom);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaDistribucion);
+      cargarDistribuciones();
+    }
+
+    async function cargarDistribuciones() {
+      marcadoresDis.forEach(m => mapaDistribucion.removeLayer(m));
+      marcadoresDis = [];
+      const lista = document.getElementById('lista-distribuciones');
+      lista.innerHTML = '<div class="loading">Cargando...</div>';
+      try {
+        const res = await apiFetch('/api/despachos/pendientes');
+        const despachos = res.data || [];
+        if (despachos.length === 0) {
+          lista.innerHTML = '<div class="empty-state">No hay despachos pendientes</div>';
+          return;
+        }
+        despachos.forEach(d => {
+          if (d.necesidades?.lat && d.necesidades?.lon) {
+            const m = L.marker([d.necesidades.lat, d.necesidades.lon], {
+              icon: L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+              })
+            }).addTo(mapaDistribucion)
+              .bindPopup(`<b>Distribución a ${d.necesidades?.punto || 'Destino'}</b><br>${d.items_despachados?.map(i => i.cantidad + ' ' + i.unidad).join('<br>') || 'Sin items'}`);
+            marcadoresDis.push(m);
+          }
+        });
+        if (marcadoresDis.length > 0) mapaDistribucion.fitBounds(L.featureGroup(marcadoresDis).getBounds().pad(0.1));
+
+        lista.innerHTML = despachos.map(d => {
+          const enlaceNavegacion = d.necesidades?.lat && d.necesidades?.lon
+            ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${d.necesidades.lat},${d.necesidades.lon}" target="_blank" class="btn btn-navigate"><i class="fa-solid fa-map-pin"></i> Navegar</a>`
+            : '';
+          return `
+            <div class="entrega-item">
+              <strong>Distribución a ${d.necesidades?.punto || 'Destino'}</strong><br>
+              <span style="font-size:13px;color:var(--text-muted);">${d.items_despachados?.map(i => i.cantidad + ' ' + i.unidad).join(', ') || 'Sin items'}</span><br>
+              <span style="font-size:12px;color:#94a3b8;">Estado: ${d.estado}</span><br>
+              <button class="btn btn-success" style="margin-top:8px;" onclick="tomarDistribucion('${d.id}')">🚚 Tomar distribución</button>
+              ${enlaceNavegacion}
+            </div>
+          `;
+        }).join('');
+      } catch {
+        lista.innerHTML = '<div class="empty-state">Error al cargar despachos</div>';
+      }
+    }
+
+    window.tomarDistribucion = async function(despachoId) {
+      if (!perfilVoluntario) return alert('Complete su perfil primero');
+      try {
+        const res = await apiFetch('/api/despachos/' + despachoId, {
+          method: 'PATCH',
+          body: JSON.stringify({ estado: 'en_transito_a_destino' })
+        });
+        mostrarMensaje('✅ Despacho asignado.', 'exito');
+        cargarDistribuciones();
+      } catch (e) {
+        mostrarMensaje('❌ ' + e.message, 'error');
+      }
+    };
+
+    function buscarDireccion(tipo) {
+      const input = document.getElementById('buscar-direccion-' + tipo);
+      const q = input.value.trim();
+      if (!q) return alert('Escriba una dirección');
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=ve`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.length > 0) {
+            const { lat, lon } = data[0];
+            if (tipo === 'rec') { initMapaRecoleccion(); mapaRecoleccion.setView([lat, lon], 13); cargarRecolecciones(); }
+            else { initMapaDistribucion(); mapaDistribucion.setView([lat, lon], 13); cargarDistribuciones(); }
+            input.value = data[0].display_name;
+          } else alert('Dirección no encontrada en Venezuela');
+        });
+    }
+
+    // PERFIL
+    document.getElementById('form-perfil').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      try {
+        await apiFetch('/api/voluntarios', {
+          method: 'POST',
+          body: JSON.stringify({
+            telefono: document.getElementById('perfil-telefono').value.trim(),
+            nombre: document.getElementById('perfil-nombre').value.trim(),
+            tipo_vehiculo: document.getElementById('perfil-vehiculo').value,
+            capacidad_carga: document.getElementById('perfil-capacidad').value.trim(),
+            lat: parseFloat(document.getElementById('perfil-lat').value),
+            lon: parseFloat(document.getElementById('perfil-lon').value),
+            activo: true
+          })
+        });
+        mostrarMensaje('✅ Perfil actualizado', 'exito');
+        mostrarSeccion('inicio');
+        cargarDatos();
+      } catch (e) {
+        mostrarMensaje('❌ ' + e.message, 'error');
+      }
+    });
+
+    function obtenerUbicacionGPS() {
+      if (!navigator.geolocation) return alert('GPS no soportado');
+      navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById('perfil-lat').value = pos.coords.latitude;
+        document.getElementById('perfil-lon').value = pos.coords.longitude;
+        document.getElementById('perfil-coords').innerText = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+      }, () => alert('No se pudo obtener ubicación'), { enableHighAccuracy: true, timeout: 10000 });
+    }
+
+    function mostrarMensaje(texto, tipo) {
+      const msg = document.getElementById('mensaje-global');
+      msg.innerText = texto;
+      msg.className = 'mensaje ' + tipo;
+      msg.style.display = 'block';
+      setTimeout(() => { msg.style.display = 'none'; }, 5000);
+    }
+
+    mostrarSeccion('inicio');
+    cargarDatos();
+  </script>
+</body>
+</html>

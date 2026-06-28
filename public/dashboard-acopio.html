@@ -1,0 +1,573 @@
+﻿<!-- @build: 2026-06-28.07-30-00 | id: B20-ACOPIO-DONACIONES | desc: Dashboard Centro de Acopio con sección Donaciones por recibir -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SOS Venezuela | Centro de Acopio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+      --bg: #f8fafc; --card: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0;
+      --radius: 16px; --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); padding-bottom: 80px; }
+    .header { background: var(--card); padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 20px; font-weight: 700; color: var(--primary); }
+    .header h1 span { color: var(--accent); }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+    .container { padding: 16px; max-width: 600px; margin: 0 auto; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: var(--card); padding: 16px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .stat-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-bottom: 8px; }
+    .stat-value { font-size: 24px; font-weight: 700; }
+    .stat-label { font-size: 12px; color: var(--text-muted); }
+    .card { background: var(--card); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 16px; }
+    .card h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
+    input, select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 16px; font-family: inherit; background: white; }
+    input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 600; font-size: 16px; cursor: pointer; transition: all 0.2s; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; width: auto; padding: 8px 15px; }
+    .search-box { position: relative; }
+    .search-results { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-radius: 10px; max-height: 200px; overflow-y: auto; z-index: 10; box-shadow: var(--shadow); display: none; }
+    .search-result-item { padding: 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
+    .search-result-item:hover { background: var(--bg); }
+    .inventory-table { width: 100%; border-collapse: collapse; }
+    .inventory-table th, .inventory-table td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .inventory-table th { color: var(--text-muted); font-weight: 600; font-size: 12px; }
+    .stock-low { color: var(--danger); font-weight: 700; }
+    .necesidad-item, .donacion-item { background: var(--card); padding: 16px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 12px; }
+    .necesidad-header, .donacion-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .necesidad-header h4, .donacion-header h4 { font-size: 16px; font-weight: 600; }
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .badge-alta { background: #fef2f2; color: var(--danger); }
+    .badge-media { background: #fffbeb; color: #92400e; }
+    .badge-baja { background: #ecfdf5; color: #065f46; }
+    .badge-ofrecida { background: #dbeafe; color: #1e40af; }
+    .badge-en_transito_a_acopio { background: #fef3c7; color: #92400e; }
+    .badge-recibida { background: #d1fae5; color: #065f46; }
+    .empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
+    .loading { text-align: center; padding: 20px; color: var(--text-muted); }
+    .mensaje { padding: 12px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; display: none; }
+    .mensaje.exito { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .mensaje.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); border: none; background: none; font-size: 10px; font-weight: 500; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+    .nav-item i { font-size: 20px; }
+    .nav-item.active { color: var(--accent); }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: white; border-radius: var(--radius); padding: 20px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto; }
+    .modal h3 { font-size: 18px; margin-bottom: 16px; }
+    .checkbox-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .checkbox-item input[type="checkbox"] { width: auto; }
+    .checkbox-item input[type="number"] { width: 80px; padding: 8px; }
+    .checkbox-item label { margin-bottom: 0; flex: 1; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>SOS <span>Venezuela</span></h1>
+    <div class="avatar" id="acopio-avatar">AC</div>
+  </header>
+
+  <div class="container">
+    <div id="mensaje-global" class="mensaje"></div>
+
+    <!-- SECCIÓN INICIO -->
+    <div class="section active" id="section-inicio">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#eff6ff;color:var(--accent);"><i class="fa-solid fa-boxes-stacked"></i></div>
+          <div class="stat-value" id="stat-total-items">--</div>
+          <div class="stat-label">Items en Inventario</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fef2f2;color:var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div class="stat-value" id="stat-stock-bajo">--</div>
+          <div class="stat-label">Stock Bajo (< 10)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fffbeb;color:var(--warning);"><i class="fa-solid fa-clock"></i></div>
+          <div class="stat-value" id="stat-pendientes">--</div>
+          <div class="stat-label">Solicitudes Pendientes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#ecfdf5;color:var(--success);"><i class="fa-solid fa-truck-fast"></i></div>
+          <div class="stat-value" id="stat-despachos">--</div>
+          <div class="stat-label">Despachos Hoy</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent);"></i> Actividad Reciente</h2>
+        <div id="actividad-reciente"><div class="loading">Cargando...</div></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN INVENTARIO -->
+    <div class="section" id="section-inventario">
+      <div class="card">
+        <h2><i class="fa-solid fa-plus-circle" style="color:var(--success);"></i> Registrar Ingreso</h2>
+        <form id="form-ingreso">
+          <div class="form-group">
+            <label>Buscar Insumo</label>
+            <div class="search-box">
+              <input type="text" id="buscar-insumo" placeholder="Ej: Paracetamol, Agua..." autocomplete="off" required>
+              <div class="search-results" id="search-results"></div>
+            </div>
+            <input type="hidden" id="insumo-id" required>
+            <input type="hidden" id="insumo-unidad" required>
+          </div>
+          <div class="form-group">
+            <label>Cantidad</label>
+            <input type="number" id="ingreso-cantidad" min="1" placeholder="Ej: 50" required>
+          </div>
+          <div class="form-group" id="grupo-vencimiento" style="display:none;">
+            <label>Fecha de Vencimiento</label>
+            <input type="date" id="ingreso-vencimiento">
+          </div>
+          <div class="form-group">
+            <label>Donante (opcional)</label>
+            <input type="text" id="ingreso-donante" placeholder="Nombre o dejar vacío si es anónimo" maxlength="100">
+          </div>
+          <button type="submit" class="btn btn-success" id="btn-ingreso">
+            <i class="fa-solid fa-plus"></i> Registrar Ingreso
+          </button>
+        </form>
+      </div>
+      <div class="card">
+        <h2><i class="fa-solid fa-boxes-stacked" style="color:var(--accent);"></i> Inventario Actual</h2>
+        <div style="overflow-x:auto;">
+          <table class="inventory-table">
+            <thead>
+              <tr><th>Insumo</th><th>Detalle</th><th>Stock</th><th>Vence</th></tr>
+            </thead>
+            <tbody id="tabla-inventario">
+              <tr><td colspan="4" class="loading">Cargando inventario...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN SOLICITUDES -->
+    <div class="section" id="section-solicitudes">
+      <div class="card">
+        <h2><i class="fa-solid fa-hand-holding-heart" style="color:var(--danger);"></i> Solicitudes Pendientes</h2>
+        <div id="lista-solicitudes"><div class="loading">Cargando solicitudes...</div></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN DONACIONES POR RECIBIR (NUEVA) -->
+    <div class="section" id="section-donaciones">
+      <div class="card">
+        <h2><i class="fa-solid fa-gift" style="color:var(--accent);"></i> Donaciones por recibir</h2>
+        <div id="lista-donaciones"><div class="loading">Cargando donaciones...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE DESPACHO -->
+  <div class="modal-overlay" id="modal-despacho">
+    <div class="modal">
+      <h3>🚚 Preparar Despacho</h3>
+      <p id="despacho-destino" style="color:var(--text-muted); margin-bottom:12px;"></p>
+      <div id="items-despacho"></div>
+      <div class="form-group" style="margin-top:16px;">
+        <label>Nota para el voluntario</label>
+        <input type="text" id="nota-despacho" placeholder="Opcional">
+      </div>
+      <button class="btn btn-primary" id="btn-confirmar-despacho">
+        <i class="fa-solid fa-paper-plane"></i> Confirmar Despacho
+      </button>
+      <button class="btn btn-danger" style="margin-top:8px;" onclick="cerrarModal()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMAR RECEPCIÓN (NUEVO) -->
+  <div class="modal-overlay" id="modal-confirmar">
+    <div class="modal">
+      <h3>✅ Confirmar Recepción de Donación</h3>
+      <p id="confirmar-info" style="color:var(--text-muted); margin-bottom:12px;"></p>
+      <div id="confirmar-detalle" style="max-height: 200px; overflow-y: auto; margin-bottom: 16px;"></div>
+      <div class="form-group">
+        <label>Cantidad rechazada (si aplica)</label>
+        <input type="number" id="confirmar-rechazo" min="0" value="0">
+      </div>
+      <div class="form-group">
+        <label>Motivo de rechazo (opcional)</label>
+        <input type="text" id="confirmar-motivo" placeholder="Ej: Cajas rotas">
+      </div>
+      <button class="btn btn-success" id="btn-confirmar-recepcion">
+        <i class="fa-solid fa-check"></i> Confirmar Recepción
+      </button>
+      <button class="btn btn-danger" style="margin-top:8px;" onclick="cerrarModalConfirmar()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- NAVEGACIÓN INFERIOR -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-section="inicio"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
+    <button class="nav-item" data-section="inventario"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span></button>
+    <button class="nav-item" data-section="solicitudes"><i class="fa-solid fa-clipboard-list"></i><span>Solicitudes</span></button>
+    <button class="nav-item" data-section="donaciones"><i class="fa-solid fa-gift"></i><span>Donaciones</span></button>
+  </nav>
+
+  <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Verificar sesión
+    if (!verificarSesion(['centro_acopio'])) throw new Error('Acceso denegado');
+
+    const sb = supabase.createClient('https://kxqwxiolouhrwddaqynp.supabase.co', 'sb_publishable_iJt58cRTDAYH_j_Mv1bJ4g_g0HdRlBF');
+    let inventarioActual = [];
+    let necesidadesActuales = [];
+    let donacionesActuales = [];
+    let acopioId = null;
+    let necesidadSeleccionada = null;
+    let donacionSeleccionada = null;
+    let searchTimeout;
+
+    // Inicializar
+    document.getElementById('acopio-avatar').innerText = (perfil.nombre_punto || 'AC').substring(0, 2).toUpperCase();
+    
+    // Navegación
+    document.querySelectorAll('.nav-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const section = btn.dataset.section;
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('section-' + section).classList.add('active');
+        btn.classList.add('active');
+        if (section === 'inventario') cargarInventario();
+        if (section === 'solicitudes') cargarSolicitudes();
+        if (section === 'donaciones') cargarDonaciones();
+        if (section === 'inicio') cargarKPIs();
+      });
+    });
+
+    // Obtener acopio_id del perfil
+    async function obtenerAcopioId() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return logout();
+      const { data: perfilData } = await sb.from('perfiles').select('user_id').eq('user_id', session.user.id).single();
+      if (perfilData) acopioId = perfilData.user_id;
+    }
+
+    // Búsqueda inteligente de catálogo
+    document.getElementById('buscar-insumo').addEventListener('input', function(e) {
+      clearTimeout(searchTimeout);
+      const query = e.target.value.trim();
+      if (query.length < 2) { document.getElementById('search-results').style.display = 'none'; return; }
+      searchTimeout = setTimeout(async () => {
+const queryNormalizada = query
+  .toLowerCase()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // quita tildes
+
+const { data, error } = await sb
+  .from('catalogo_insumos')
+  .select('*')
+  .ilike('nombre_normalizado', '%' + queryNormalizada + '%')
+  .limit(8);        if (error || !data) return;
+        const resultsDiv = document.getElementById('search-results');
+        if (data.length > 0) {
+          resultsDiv.innerHTML = data.map(item => 
+            `<div class="search-result-item" onclick="seleccionarInsumo('${item.id}','${item.nombre_mostrar}','${item.unidad_sugerida}',${item.requiere_vencimiento})">
+              ${item.nombre_mostrar} <span style="color:var(--text-muted);font-size:12px;">(${item.unidad_sugerida})</span>
+            </div>`
+          ).join('');
+          resultsDiv.style.display = 'block';
+        } else {
+          resultsDiv.innerHTML = '<div class="search-result-item" style="color:var(--text-muted);">No encontrado. <a onclick="agregarOtro()">Agregar manual</a></div>';
+          resultsDiv.style.display = 'block';
+        }
+      }, 300);
+    });
+
+    function seleccionarInsumo(id, nombre, unidad, requiereVenc) {
+      document.getElementById('buscar-insumo').value = nombre;
+      document.getElementById('insumo-id').value = id;
+      document.getElementById('insumo-unidad').value = unidad;
+      document.getElementById('search-results').style.display = 'none';
+      document.getElementById('grupo-vencimiento').style.display = requiereVenc ? 'block' : 'none';
+    }
+
+    function agregarOtro() {
+      const nombre = document.getElementById('buscar-insumo').value.trim();
+      if (!nombre) return;
+      document.getElementById('insumo-id').value = 'nuevo';
+      document.getElementById('insumo-unidad').value = 'unidades';
+      document.getElementById('search-results').style.display = 'none';
+      alert('Se registrará como insumo nuevo: ' + nombre);
+    }
+
+    document.addEventListener('click', e => { if (!e.target.closest('.search-box')) document.getElementById('search-results').style.display = 'none'; });
+
+    // Ingresar inventario
+    document.getElementById('form-ingreso').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-ingreso');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
+      try {
+        const insumoId = document.getElementById('insumo-id').value;
+        const cantidad = parseInt(document.getElementById('ingreso-cantidad').value);
+        const vencimiento = document.getElementById('ingreso-vencimiento').value || null;
+        const donante = document.getElementById('ingreso-donante').value.trim() || null;
+        
+        const body = {
+          acopio_id: acopioId,
+          insumo_id: insumoId === 'nuevo' ? '00000000-0000-0000-0000-000000000000' : insumoId,
+          tipo: 'otros',
+          detalle: document.getElementById('buscar-insumo').value.trim(),
+          unidad: document.getElementById('insumo-unidad').value,
+          cantidad: cantidad,
+          fecha_vencimiento: vencimiento,
+          donante: donante
+        };
+        
+        const res = await apiFetch('/api/inventario/ingreso', { method: 'POST', body: JSON.stringify(body) });
+        mostrarMensaje('✅ Ingreso registrado. Inventario actualizado.', 'exito');
+        this.reset();
+        document.getElementById('grupo-vencimiento').style.display = 'none';
+        cargarInventario();
+      } catch (e) {
+        mostrarMensaje('❌ ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-plus"></i> Registrar Ingreso';
+      }
+    });
+
+    // Cargar inventario
+    async function cargarInventario() {
+      const tbody = document.getElementById('tabla-inventario');
+      tbody.innerHTML = '<tr><td colspan="4" class="loading">Cargando...</td></tr>';
+      try {
+        const res = await apiFetch('/api/inventario/' + acopioId);
+        inventarioActual = res.data || [];
+        if (inventarioActual.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Inventario vacío</td></tr>';
+        } else {
+          tbody.innerHTML = inventarioActual.map(item => `
+            <tr>
+              <td>${item.catalogo_insumos?.nombre_mostrar || item.detalle}</td>
+              <td>${item.detalle || '--'}</td>
+              <td class="${item.cantidad < 10 ? 'stock-low' : ''}">${item.cantidad} ${item.unidad}</td>
+              <td>${item.fecha_vencimiento ? new Date(item.fecha_vencimiento).toLocaleDateString('es-VE') : '--'}</td>
+            </tr>
+          `).join('');
+        }
+        document.getElementById('stat-total-items').innerText = inventarioActual.length;
+        document.getElementById('stat-stock-bajo').innerText = inventarioActual.filter(i => i.cantidad < 10).length;
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Error al cargar inventario</td></tr>';
+      }
+    }
+
+    // Cargar solicitudes
+    async function cargarSolicitudes() {
+      const lista = document.getElementById('lista-solicitudes');
+      lista.innerHTML = '<div class="loading">Cargando...</div>';
+      try {
+        const res = await apiFetch('/api/necesidades');
+        necesidadesActuales = res.data || [];
+        if (necesidadesActuales.length === 0) {
+          lista.innerHTML = '<div class="empty-state">🎉 No hay solicitudes pendientes</div>';
+        } else {
+          lista.innerHTML = necesidadesActuales.map(nec => `
+            <div class="necesidad-item">
+              <div class="necesidad-header">
+                <h4>${nec.punto} <span style="font-size:12px;color:var(--text-muted);">(${nec.tipo_punto})</span></h4>
+                <span class="badge badge-${nec.prioridad}">${nec.prioridad}</span>
+              </div>
+              <p style="font-size:14px;color:var(--text-muted);margin-bottom:8px;">
+                ${Array.isArray(nec.items) ? nec.items.map(i => `${i.cantidad} ${i.unidad} de ${i.detalle || i.tipo}`).join(', ') : 'Sin items'}
+              </p>
+              <p style="font-size:12px;color:#94a3b8;">📅 ${new Date(nec.creado_en).toLocaleString('es-VE')}</p>
+              <button class="btn btn-primary" style="margin-top:10px;" onclick="abrirModalDespacho('${nec.id}','${nec.punto}')">
+                🚚 Preparar Despacho
+              </button>
+            </div>
+          `).join('');
+        }
+        document.getElementById('stat-pendientes').innerText = necesidadesActuales.length;
+      } catch (e) {
+        lista.innerHTML = '<div class="empty-state">Error al cargar solicitudes</div>';
+      }
+    }
+
+    // Cargar donaciones (NUEVO)
+    async function cargarDonaciones() {
+      const lista = document.getElementById('lista-donaciones');
+      lista.innerHTML = '<div class="loading">Cargando donaciones...</div>';
+      try {
+        const res = await apiFetch('/api/donaciones?acopio_id=' + acopioId);
+        donacionesActuales = res.data || [];
+        if (donacionesActuales.length === 0) {
+          lista.innerHTML = '<div class="empty-state">🎉 No hay donaciones pendientes</div>';
+          return;
+        }
+        lista.innerHTML = donacionesActuales.map(don => {
+          const items = don.detalle_donacion || [];
+          const itemsTexto = items.map(i => `${i.cantidad} ${i.unidad} de ${i.catalogo_insumos?.nombre_mostrar || 'Insumo'}`).join(', ');
+          const estadoClass = 'badge-' + don.estado.replace(/_/g, '_');
+          return `
+            <div class="donacion-item">
+              <div class="donacion-header">
+                <h4>${itemsTexto}</h4>
+                <span class="badge ${estadoClass}">${don.estado.replace(/_/g, ' ')}</span>
+              </div>
+              <p style="font-size:14px;color:var(--text-muted);margin-bottom:8px;">
+                Donante: ${don.donante_id ? 'Registrado' : 'Anónimo'} | Modo: ${don.modo_entrega}
+              </p>
+              <p style="font-size:12px;color:#94a3b8;">📅 ${new Date(don.creado_en).toLocaleString('es-VE')}</p>
+              ${don.estado !== 'recibida' ? `<button class="btn btn-success" style="margin-top:10px;" onclick="abrirModalConfirmar('${don.id}')">✅ Confirmar Recepción</button>` : ''}
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        lista.innerHTML = '<div class="empty-state">Error al cargar donaciones</div>';
+      }
+    }
+
+    // Modal de despacho
+    function abrirModalDespacho(necesidadId, punto) {
+      necesidadSeleccionada = necesidadId;
+      document.getElementById('despacho-destino').innerText = 'Destino: ' + punto;
+      const itemsDiv = document.getElementById('items-despacho');
+      if (inventarioActual.length === 0) {
+        itemsDiv.innerHTML = '<p style="color:var(--danger);">No tienes inventario para despachar.</p>';
+      } else {
+        itemsDiv.innerHTML = inventarioActual.filter(i => i.cantidad > 0).map(item => `
+          <div class="checkbox-item">
+            <input type="checkbox" id="chk-${item.id}" value="${item.id}">
+            <label for="chk-${item.id}">${item.catalogo_insumos?.nombre_mostrar || item.detalle} (Stock: ${item.cantidad} ${item.unidad})</label>
+            <input type="number" id="cant-${item.id}" min="1" max="${item.cantidad}" placeholder="Cant" style="width:80px;" disabled>
+          </div>
+        `).join('');
+        
+        document.querySelectorAll('#items-despacho input[type="checkbox"]').forEach(chk => {
+          chk.addEventListener('change', function() {
+            document.getElementById('cant-' + this.value).disabled = !this.checked;
+            if (this.checked) document.getElementById('cant-' + this.value).focus();
+          });
+        });
+      }
+      document.getElementById('modal-despacho').classList.add('active');
+    }
+
+    function cerrarModal() {
+      document.getElementById('modal-despacho').classList.remove('active');
+      necesidadSeleccionada = null;
+    }
+
+    document.getElementById('btn-confirmar-despacho').addEventListener('click', async function() {
+      const btn = this;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Despachando...';
+      try {
+        const items = [];
+        document.querySelectorAll('#items-despacho input[type="checkbox"]:checked').forEach(chk => {
+          const cant = parseInt(document.getElementById('cant-' + chk.value).value);
+          if (cant > 0) items.push({ inventario_id: chk.value, cantidad: cant });
+        });
+        if (items.length === 0) throw new Error('Selecciona al menos un item y cantidad');
+        
+        const body = {
+          idempotencyKey: generarUUID(),
+          necesidad_id: necesidadSeleccionada,
+          acopio_id: acopioId,
+          items: items
+        };
+        await apiFetch('/api/despachos', { method: 'POST', body: JSON.stringify(body) });
+        mostrarMensaje('✅ Despacho creado exitosamente.', 'exito');
+        cerrarModal();
+        cargarInventario();
+        cargarSolicitudes();
+        document.getElementById('stat-despachos').innerText = parseInt(document.getElementById('stat-despachos').innerText || 0) + 1;
+      } catch (e) {
+        mostrarMensaje('❌ ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Confirmar Despacho';
+      }
+    });
+
+    // Modal de confirmar recepción (NUEVO)
+    function abrirModalConfirmar(donacionId) {
+      donacionSeleccionada = donacionId;
+      const donacion = donacionesActuales.find(d => d.id === donacionId);
+      if (donacion) {
+        const items = donacion.detalle_donacion || [];
+        document.getElementById('confirmar-info').innerText = `Donación de ${items.map(i => i.cantidad + ' ' + i.unidad + ' de ' + (i.catalogo_insumos?.nombre_mostrar || 'Insumo')).join(', ')}`;
+        document.getElementById('confirmar-detalle').innerHTML = items.map(i => `<div>${i.cantidad} ${i.unidad} de ${i.catalogo_insumos?.nombre_mostrar || 'Insumo'}</div>`).join('');
+      }
+      document.getElementById('modal-confirmar').classList.add('active');
+    }
+
+    function cerrarModalConfirmar() {
+      document.getElementById('modal-confirmar').classList.remove('active');
+      donacionSeleccionada = null;
+    }
+
+    document.getElementById('btn-confirmar-recepcion').addEventListener('click', async function() {
+      const btn = this;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Confirmando...';
+      try {
+        const rechazo = parseInt(document.getElementById('confirmar-rechazo').value) || 0;
+        const motivo = document.getElementById('confirmar-motivo').value.trim() || undefined;
+        const body = { cantidad_rechazada: rechazo, motivo_rechazo: motivo };
+        await apiFetch('/api/donaciones/' + donacionSeleccionada + '/confirmar', { method: 'PATCH', body: JSON.stringify(body) });
+        mostrarMensaje('✅ Recepción confirmada. Inventario actualizado.', 'exito');
+        cerrarModalConfirmar();
+        cargarDonaciones();
+        cargarInventario();
+      } catch (e) {
+        mostrarMensaje('❌ ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Recepción';
+      }
+    });
+
+    // KPIs
+    async function cargarKPIs() {
+      await obtenerAcopioId();
+      if (acopioId) {
+        cargarInventario();
+        cargarSolicitudes();
+        cargarDonaciones();
+      }
+      document.getElementById('actividad-reciente').innerHTML = '<p style="color:var(--text-muted);">Resumen del centro de acopio listo.</p>';
+    }
+
+    function mostrarMensaje(texto, tipo) {
+      const msg = document.getElementById('mensaje-global');
+      msg.innerText = texto;
+      msg.className = 'mensaje ' + tipo;
+      msg.style.display = 'block';
+      setTimeout(() => { msg.style.display = 'none'; }, 5000);
+    }
+
+    // Iniciar
+    obtenerAcopioId().then(() => {
+      cargarInventario();
+      cargarSolicitudes();
+      cargarDonaciones();
+    });
+  </script>
+</body>
+</html>

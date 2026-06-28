@@ -1,0 +1,262 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reportar Necesidad</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <header>
+    <h1>📋 Reportar Necesidad</h1>
+    <a href="#" onclick="logout()" class="back">Cerrar sesión</a>
+  </header>
+  <main>
+    <form id="necesidadForm" class="form-card">
+      <p>Perfil: <span id="nombrePerfil"></span></p>
+      <label>Punto de ayuda:</label>
+      <input type="text" id="punto" required maxlength="100" />
+      <label>Tipo de punto:</label>
+      <select id="tipo_punto" required>
+        <option value="refugio">Refugio</option>
+        <option value="hospital">Hospital</option>
+      </select>
+      <label>Ubicación:</label>
+      <div class="search-box">
+        <input type="text" id="buscarDireccion" placeholder="Buscar dirección o lugar..." autocomplete="off" />
+        <div id="sugerencias" class="dropdown-sugerencias"></div>
+        <button type="button" id="btnBuscarDireccion" class="btn-secondary">🔎 Buscar</button>
+      </div>
+      <button type="button" id="btnUbicacion" class="btn-secondary">📍 Usar mi ubicación actual</button>
+      <div id="mapContainer" style="display:none; height:250px; margin-top:8px;"></div>
+      <input type="hidden" id="lat" />
+      <input type="hidden" id="lon" />
+      <label>¿Qué se necesita?</label>
+      <div id="itemsContainer"></div>
+      <button type="button" id="addItem" class="btn-secondary">+ Añadir insumo</button>
+      <label>Prioridad:</label>
+      <select id="prioridad" required>
+        <option value="alta">Alta</option>
+        <option value="media" selected>Media</option>
+        <option value="baja">Baja</option>
+      </select>
+      <button type="submit" id="submitBtn" class="btn-primary">🚀 Enviar necesidad</button>
+      <div id="mensaje" class="mensaje" style="display:none;"></div>
+    </form>
+  </main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if (!verificarSesion(['refugio', 'centro_salud', 'centro_acopio'])) throw new Error('Acceso denegado');
+
+    document.getElementById('nombrePerfil').textContent = perfil.nombre_punto || perfil.email;
+    if (perfil.nombre_punto) document.getElementById('punto').value = perfil.nombre_punto;
+    if (perfil.tipo_punto) document.getElementById('tipo_punto').value = perfil.tipo_punto;
+
+    var map, marker;
+
+    function mostrarMapa(lat, lon) {
+      var mapDiv = document.getElementById('mapContainer');
+      mapDiv.style.display = 'block';
+      if (!map) {
+        map = L.map('mapContainer').setView([lat, lon], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        map.on('click', function(e) {
+          colocarMarcador(e.latlng.lat, e.latlng.lng);
+        });
+      } else {
+        map.setView([lat, lon], 15);
+      }
+      map.invalidateSize();  // Forzar recálculo del tamaño después de mostrar
+      colocarMarcador(lat, lon);
+    }
+
+    function colocarMarcador(lat, lon) {
+      if (marker) map.removeLayer(marker);
+      var redIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+      marker = L.marker([lat, lon], { icon: redIcon, draggable: true }).addTo(map);
+      marker.on('dragend', function() {
+        var pos = marker.getLatLng();
+        document.getElementById('lat').value = pos.lat.toFixed(6);
+        document.getElementById('lon').value = pos.lng.toFixed(6);
+        obtenerDireccion(pos.lat, pos.lng, function(dir) { if (dir) document.getElementById('buscarDireccion').value = dir; });
+      });
+      document.getElementById('lat').value = lat.toFixed(6);
+      document.getElementById('lon').value = lon.toFixed(6);
+      console.log('Marcador colocado en', lat, lon);
+    }
+
+    if (perfil.lat && perfil.lon) {
+      document.getElementById('lat').value = perfil.lat;
+      document.getElementById('lon').value = perfil.lon;
+      mostrarMapa(perfil.lat, perfil.lon);
+      obtenerDireccion(perfil.lat, perfil.lon, function(dir) { if (dir) document.getElementById('buscarDireccion').value = dir; });
+    }
+
+    document.getElementById('btnUbicacion').addEventListener('click', function() {
+      obtenerUbicacion(function(err, coords) {
+        if (err || !coords) {
+          alert('No se pudo obtener la ubicación. Use el mapa o la búsqueda.');
+        } else {
+          mostrarMapa(coords.lat, coords.lon);
+          obtenerDireccion(coords.lat, coords.lon, function(dir) { if (dir) document.getElementById('buscarDireccion').value = dir; });
+        }
+      });
+    });
+
+    document.getElementById('btnBuscarDireccion').addEventListener('click', function() {
+      buscarYMostrar(document.getElementById('buscarDireccion').value);
+    });
+
+    function buscarYMostrar(query) {
+      if (!query.trim()) return alert('Escriba una dirección o lugar.');
+      fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query))
+        .then(r => r.json())
+        .then(function(data) {
+          if (data.length === 0) { alert('Sin resultados.'); return; }
+          var primero = data[0];
+          var lat = parseFloat(primero.lat), lon = parseFloat(primero.lon);
+          mostrarMapa(lat, lon);
+          document.getElementById('buscarDireccion').value = primero.display_name;
+          cerrarSugerencias();
+        }).catch(function() { alert('Error de red.'); });
+    }
+
+    // Dropdown
+    (function() {
+      var input = document.getElementById('buscarDireccion');
+      var sugerenciasDiv = document.getElementById('sugerencias');
+      var debounceTimer;
+      input.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        var texto = this.value.trim();
+        if (texto.length < 3) {
+          sugerenciasDiv.innerHTML = ''; sugerenciasDiv.style.display = 'none';
+          return;
+        }
+        debounceTimer = setTimeout(function() {
+          fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(texto))
+            .then(r => r.json())
+            .then(function(data) {
+              if (!data || data.length === 0) {
+                sugerenciasDiv.innerHTML = ''; sugerenciasDiv.style.display = 'none';
+                return;
+              }
+              sugerenciasDiv.innerHTML = data.slice(0, 5).map(function(item) {
+                return '<div class="sugerencia-item" data-lat="' + item.lat + '" data-lon="' + item.lon + '" data-display="' + item.display_name.replace(/"/g, '&quot;') + '">' + item.display_name + '</div>';
+              }).join('');
+              sugerenciasDiv.style.display = 'block';
+            });
+        }, 300);
+      });
+      sugerenciasDiv.addEventListener('click', function(e) {
+        var item = e.target.closest('.sugerencia-item');
+        if (!item) return;
+        var lat = parseFloat(item.getAttribute('data-lat'));
+        var lon = parseFloat(item.getAttribute('data-lon'));
+        var display = item.getAttribute('data-display').replace(/&quot;/g, '"');
+        input.value = display;
+        mostrarMapa(lat, lon);
+        cerrarSugerencias();
+      });
+    })();
+
+    function cerrarSugerencias() {
+      var div = document.getElementById('sugerencias');
+      if (div) { div.innerHTML = ''; div.style.display = 'none'; }
+    }
+    document.addEventListener('click', function(e) {
+      var input = document.getElementById('buscarDireccion');
+      var div = document.getElementById('sugerencias');
+      if (div && !div.contains(e.target) && e.target !== input) cerrarSugerencias();
+    });
+
+    // Items (sin cambios)
+    var unidadesPermitidas = ['litros', 'kilogramos', 'unidades', 'dosis', 'metros', 'cajas', 'paquetes', 'otros'];
+    function crearItemRow() {
+      var div = document.createElement('div');
+      div.className = 'item-row';
+      var selTipo = document.createElement('select');
+      selTipo.className = 'tipo'; selTipo.required = true;
+      var tipos = ['', 'agua_potable', 'alimentos_no_perecibles', 'medicinas', 'colchonetas', 'ropa', 'otros'];
+      var textos = ['Tipo...', 'Agua potable', 'Alimentos no perecibles', 'Medicinas', 'Colchonetas', 'Ropa', 'Otros'];
+      for (var i = 0; i < tipos.length; i++) {
+        var opt = document.createElement('option'); opt.value = tipos[i]; opt.textContent = textos[i]; selTipo.appendChild(opt);
+      }
+      var inputDetalle = document.createElement('input');
+      inputDetalle.type = 'text'; inputDetalle.className = 'detalle'; inputDetalle.placeholder = 'Detalle'; inputDetalle.maxLength = 200;
+      var datalist = document.createElement('datalist'); datalist.className = 'detalleList';
+      inputDetalle.setAttribute('list', 'datalist-' + Math.random()); datalist.id = inputDetalle.getAttribute('list');
+
+      var inputCant = document.createElement('input'); inputCant.type = 'number'; inputCant.className = 'cantidad'; inputCant.placeholder = 'Cant'; inputCant.min = 1; inputCant.required = true;
+      var selUnidad = document.createElement('select'); selUnidad.className = 'unidad'; selUnidad.required = true;
+      for (var u = 0; u < unidadesPermitidas.length; u++) {
+        var optU = document.createElement('option'); optU.value = unidadesPermitidas[u]; optU.textContent = unidadesPermitidas[u]; selUnidad.appendChild(optU);
+      }
+      var btnRemove = document.createElement('button'); btnRemove.type = 'button'; btnRemove.className = 'removeItem';
+      btnRemove.style.width = 'auto'; btnRemove.style.background = 'red'; btnRemove.style.color = 'white'; btnRemove.style.border = 'none'; btnRemove.style.borderRadius = '4px'; btnRemove.textContent = 'X';
+      btnRemove.addEventListener('click', function() { div.remove(); });
+      div.appendChild(selTipo); div.appendChild(inputDetalle); div.appendChild(datalist); div.appendChild(inputCant); div.appendChild(selUnidad); div.appendChild(btnRemove);
+      selTipo.addEventListener('change', async function() {
+        if (selTipo.value) {
+          var items = await cargarCatalogo(selTipo.value);
+          datalist.innerHTML = '';
+          for (var j = 0; j < items.length; j++) {
+            var option = document.createElement('option'); option.value = items[j]; datalist.appendChild(option);
+          }
+        }
+      });
+      return div;
+    }
+    var containerItems = document.getElementById('itemsContainer');
+    containerItems.appendChild(crearItemRow());
+    document.getElementById('addItem').addEventListener('click', function() { containerItems.appendChild(crearItemRow()); });
+
+    document.getElementById('necesidadForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var btn = document.getElementById('submitBtn'); btn.disabled = true; btn.textContent = 'Enviando...';
+      var msg = document.getElementById('mensaje'); msg.style.display = 'none';
+      try {
+        var lat = parseFloat(document.getElementById('lat').value);
+        var lon = parseFloat(document.getElementById('lon').value);
+        if (isNaN(lat) || isNaN(lon)) throw new Error('Debe seleccionar una ubicación.');
+        var items = [];
+        document.querySelectorAll('#itemsContainer .item-row').forEach(function(row) {
+          var tipo = row.querySelector('.tipo').value;
+          var detalle = row.querySelector('.detalle').value.trim();
+          var cantidad = parseInt(row.querySelector('.cantidad').value);
+          var unidad = row.querySelector('.unidad').value;
+          if (tipo && cantidad > 0 && unidad) items.push({ tipo: tipo, cantidad: cantidad, unidad: unidad, detalle: detalle || undefined });
+        });
+        if (items.length === 0) throw new Error('Añada al menos un insumo.');
+        var body = {
+          idempotencyKey: generarUUID(),
+          punto: document.getElementById('punto').value.trim(),
+          ubicacion: { lat: lat, lon: lon },
+          items: items,
+          prioridad: document.getElementById('prioridad').value,
+          tipo_punto: document.getElementById('tipo_punto').value
+        };
+        var res = await apiFetch('/api/necesidades', { method: 'POST', body: JSON.stringify(body) });
+        msg.style.display = 'block'; msg.className = 'mensaje exito';
+        msg.textContent = '✅ Necesidad registrada. ID: ' + res.data.id;
+        containerItems.innerHTML = ''; containerItems.appendChild(crearItemRow());
+        document.getElementById('prioridad').value = 'media';
+      } catch (err) {
+        msg.style.display = 'block'; msg.className = 'mensaje error';
+        msg.textContent = '❌ ' + (err.message || 'Error de conexión');
+      } finally {
+        btn.disabled = false; btn.textContent = '🚀 Enviar necesidad';
+      }
+    });
+  </script>
+</body>
+</html>

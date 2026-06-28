@@ -1,0 +1,405 @@
+<!-- @build: 2026-06-27.21-00-00 | id: B26-SUPERADMIN-FINAL-V2 | desc: Dashboard Super Admin completo con mapa, KPIs, gestión de usuarios, inventario, necesidades, despachos, configuración y logout -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SOS Venezuela | Super Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+      --bg: #f8fafc; --card: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0;
+      --radius: 16px; --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); padding-bottom: 80px; }
+    .header { background: var(--primary); padding: 16px 20px; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 20px; font-weight: 700; color: white; }
+    .header h1 span { color: var(--accent); }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+    .container { padding: 16px; max-width: 600px; margin: 0 auto; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: var(--card); padding: 16px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .stat-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-bottom: 8px; }
+    .stat-value { font-size: 24px; font-weight: 700; }
+    .stat-label { font-size: 12px; color: var(--text-muted); }
+    .card { background: var(--card); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 16px; }
+    .card h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
+    input, select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 16px; font-family: inherit; background: white; }
+    input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 600; font-size: 16px; cursor: pointer; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-outline { background: white; border: 2px solid var(--border); color: var(--text-main); }
+    .map { height: 250px; border-radius: var(--radius); margin-bottom: 16px; border: 1px solid var(--border); }
+    .user-item { background: var(--card); padding: 14px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+    .user-avatar-small { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; color: white; flex-shrink: 0; }
+    .user-info { flex: 1; }
+    .user-info strong { font-size: 15px; }
+    .user-info span { font-size: 12px; color: var(--text-muted); display: block; }
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .badge-admin { background: #fef2f2; color: var(--danger); }
+    .badge-acopio { background: #fffbeb; color: #92400e; }
+    .badge-refugio { background: #eff6ff; color: var(--accent); }
+    .badge-hospital { background: #fef2f2; color: var(--danger); }
+    .badge-voluntario { background: #ecfdf5; color: #065f46; }
+    .badge-donante { background: #f0fdf4; color: #166534; }
+    .inventory-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .action-buttons { display: flex; gap: 8px; }
+    .action-buttons .btn { width: auto; padding: 8px 14px; font-size: 13px; }
+    .empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
+    .loading { text-align: center; padding: 20px; color: var(--text-muted); }
+    .mensaje { padding: 12px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; display: none; }
+    .mensaje.exito { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .mensaje.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; overflow-x: auto; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); border: none; background: none; font-size: 10px; font-weight: 500; padding: 6px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+    .nav-item i { font-size: 20px; }
+    .nav-item.active { color: var(--accent); }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: white; border-radius: var(--radius); padding: 20px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto; }
+    .modal h3 { font-size: 18px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>SOS <span>Venezuela</span></h1>
+    <div class="avatar" id="admin-avatar">AD</div>
+  </header>
+
+  <div class="container">
+    <div id="mensaje-global" class="mensaje"></div>
+
+    <!-- INICIO -->
+    <div class="section active" id="section-inicio">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon" style="background:#eff6ff;color:var(--accent);"><i class="fa-solid fa-box-open"></i></div><div class="stat-value" id="stat-donaciones">--</div><div class="stat-label">Donaciones</div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:#fef2f2;color:var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i></div><div class="stat-value" id="stat-necesidades">--</div><div class="stat-label">Necesidades Pend.</div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:#ecfdf5;color:var(--success);"><i class="fa-solid fa-truck-fast"></i></div><div class="stat-value" id="stat-voluntarios">--</div><div class="stat-label">Voluntarios</div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:#fffbeb;color:var(--warning);"><i class="fa-solid fa-warehouse"></i></div><div class="stat-value" id="stat-acopios">--</div><div class="stat-label">Acopios</div></div>
+      </div>
+      <div class="card">
+        <h2><i class="fa-solid fa-map-location-dot" style="color:var(--accent);"></i> Mapa Nacional</h2>
+        <div class="map" id="mapa-admin"></div>
+      </div>
+    </div>
+
+    <!-- USUARIOS -->
+    <div class="section" id="section-usuarios">
+      <div class="card">
+        <h2><i class="fa-solid fa-users" style="color:var(--accent);"></i> Usuarios Registrados</h2>
+        <button class="btn btn-success" style="margin-bottom:12px;" onclick="abrirModalCrearUsuario()">
+          ➕ Crear Nuevo Usuario
+        </button>
+        <div id="lista-usuarios"><div class="loading">Cargando...</div></div>
+      </div>
+    </div>
+
+    <!-- INVENTARIO -->
+    <div class="section" id="section-inventario">
+      <div class="card">
+        <h2><i class="fa-solid fa-boxes-stacked" style="color:var(--accent);"></i> Inventario Nacional</h2>
+        <div id="lista-inventario"><div class="loading">Cargando...</div></div>
+      </div>
+    </div>
+
+    <!-- NECESIDADES -->
+    <div class="section" id="section-necesidades">
+      <div class="card">
+        <h2><i class="fa-solid fa-clipboard-list" style="color:var(--danger);"></i> Todas las Necesidades</h2>
+        <div id="lista-necesidades-admin"><div class="loading">Cargando...</div></div>
+      </div>
+    </div>
+
+    <!-- DESPACHOS -->
+    <div class="section" id="section-despachos">
+      <div class="card">
+        <h2><i class="fa-solid fa-truck-fast" style="color:var(--success);"></i> Despachos</h2>
+        <div id="lista-despachos"><div class="loading">Cargando...</div></div>
+      </div>
+    </div>
+
+    <!-- CONFIGURACIÓN -->
+    <div class="section" id="section-configuracion">
+      <div class="card">
+        <h2><i class="fa-solid fa-gear" style="color:var(--text-muted);"></i> Configuración del Sistema</h2>
+        <div class="form-group">
+          <label>Radio máximo de búsqueda (km)</label>
+          <input type="number" id="config-radio" value="200" min="10" max="500">
+        </div>
+        <div class="form-group">
+          <label>Notificaciones para Super Admin</label>
+          <select id="config-notificaciones">
+            <option value="todas">Todas</option>
+            <option value="urgentes">Solo urgentes</option>
+            <option value="ninguna">Ninguna</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="guardarConfiguracion()">💾 Guardar Configuración</button>
+      </div>
+      <div class="card">
+        <h2><i class="fa-solid fa-right-from-bracket" style="color:var(--danger);"></i> Sesión</h2>
+        <button class="btn btn-danger" onclick="logout()">🚪 Cerrar Sesión</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CREAR USUARIO -->
+  <div class="modal-overlay" id="modal-crear-usuario">
+    <div class="modal">
+      <h3>➕ Crear Nuevo Usuario</h3>
+      <form id="form-crear-usuario">
+        <div class="form-group">
+          <label>Correo Electrónico</label>
+          <input type="email" id="nuevo-email" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña Temporal</label>
+          <input type="password" id="nuevo-password" required minlength="8">
+        </div>
+        <div class="form-group">
+          <label>Rol</label>
+          <select id="nuevo-rol" required>
+            <option value="">Seleccione...</option>
+            <option value="donante">Donante</option>
+            <option value="refugio">Refugio</option>
+            <option value="centro_salud">Centro de Salud</option>
+            <option value="centro_acopio">Centro de Acopio</option>
+            <option value="voluntario">Voluntario</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nombre del Punto/Centro</label>
+          <input type="text" id="nuevo-nombre" required>
+        </div>
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="text" id="nuevo-telefono">
+        </div>
+        <button type="submit" class="btn btn-success">Crear Usuario</button>
+        <button type="button" class="btn btn-outline" style="margin-top:8px;" onclick="cerrarModalCrear()">Cancelar</button>
+      </form>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-section="inicio"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
+    <button class="nav-item" data-section="usuarios"><i class="fa-solid fa-users"></i><span>Usuarios</span></button>
+    <button class="nav-item" data-section="inventario"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span></button>
+    <button class="nav-item" data-section="necesidades"><i class="fa-solid fa-list"></i><span>Necesid.</span></button>
+    <button class="nav-item" data-section="despachos"><i class="fa-solid fa-truck-fast"></i><span>Despachos</span></button>
+    <button class="nav-item" data-section="configuracion"><i class="fa-solid fa-gear"></i><span>Ajustes</span></button>
+  </nav>
+
+  <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    if (!verificarSesion(['super_admin'])) throw new Error('Acceso denegado');
+
+    const sb = supabase.createClient('https://kxqwxiolouhrwddaqynp.supabase.co', 'sb_publishable_iJt58cRTDAYH_j_Mv1bJ4g_g0HdRlBF');
+    let mapaAdmin = null;
+
+    document.getElementById('admin-avatar').innerText = (perfil.nombre_punto || 'AD').substring(0, 2).toUpperCase();
+
+    // Navegación
+    document.querySelectorAll('.nav-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('section-' + btn.dataset.section).classList.add('active');
+        btn.classList.add('active');
+        const s = btn.dataset.section;
+        if (s === 'inicio') initMapaAdmin();
+        if (s === 'usuarios') cargarUsuarios();
+        if (s === 'inventario') cargarInventario();
+        if (s === 'necesidades') cargarNecesidades();
+        if (s === 'despachos') cargarDespachos();
+      });
+    });
+
+    // MAPA
+    function initMapaAdmin() {
+      if (mapaAdmin) { mapaAdmin.invalidateSize(); return; }
+      mapaAdmin = L.map('mapa-admin').setView([8.0, -66.0], 6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaAdmin);
+      cargarPuntosEnMapa();
+    }
+
+    async function cargarPuntosEnMapa() {
+      const { data } = await sb.from('perfiles').select('nombre_punto, rol, lat, lon').not('lat', 'is', null).not('lon', 'is', null);
+      if (!data || !mapaAdmin) return;
+      const colores = { centro_acopio: '#f59e0b', refugio: '#3b82f6', centro_salud: '#ef4444', voluntario: '#10b981' };
+      data.forEach(p => {
+        if (p.lat && p.lon && colores[p.rol]) {
+          L.circleMarker([p.lat, p.lon], { radius: 8, color: colores[p.rol], fillColor: colores[p.rol], fillOpacity: 0.7 })
+            .addTo(mapaAdmin).bindPopup(`<b>${p.nombre_punto || p.rol}</b><br>${p.rol}`);
+        }
+      });
+    }
+
+    // KPIs
+    async function cargarKPIs() {
+      const { count: donaciones } = await sb.from('donaciones').select('*', { count: 'exact', head: true });
+      const { count: necesidades } = await sb.from('necesidades').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente');
+      const { count: voluntarios } = await sb.from('perfiles').select('*', { count: 'exact', head: true }).eq('rol', 'voluntario').eq('activo', true);
+      const { count: acopios } = await sb.from('perfiles').select('*', { count: 'exact', head: true }).eq('rol', 'centro_acopio').eq('activo', true);
+      document.getElementById('stat-donaciones').innerText = donaciones || 0;
+      document.getElementById('stat-necesidades').innerText = necesidades || 0;
+      document.getElementById('stat-voluntarios').innerText = voluntarios || 0;
+      document.getElementById('stat-acopios').innerText = acopios || 0;
+    }
+
+    // USUARIOS
+    async function cargarUsuarios() {
+      const lista = document.getElementById('lista-usuarios');
+      lista.innerHTML = '<div class="loading">Cargando...</div>';
+      const { data } = await sb.from('perfiles').select('*').order('creado_en', { ascending: false }).limit(50);
+      if (!data || data.length === 0) {
+        lista.innerHTML = '<div class="empty-state">No hay usuarios</div>';
+        return;
+      }
+      const roles = { super_admin: 'badge-admin', centro_acopio: 'badge-acopio', refugio: 'badge-refugio', centro_salud: 'badge-hospital', voluntario: 'badge-voluntario', donante: 'badge-donante' };
+      const labels = { super_admin: 'Admin', centro_acopio: 'Acopio', refugio: 'Refugio', centro_salud: 'Hospital', voluntario: 'Voluntario', donante: 'Donante' };
+      const colores = { super_admin: '#ef4444', centro_acopio: '#f59e0b', refugio: '#3b82f6', centro_salud: '#ef4444', voluntario: '#10b981', donante: '#166534' };
+      lista.innerHTML = data.map(u => `
+        <div class="user-item">
+          <div class="user-avatar-small" style="background:${colores[u.rol] || '#3b82f6'}">${(u.nombre_punto || 'U').substring(0, 2).toUpperCase()}</div>
+          <div class="user-info">
+            <strong>${u.nombre_punto || 'Sin nombre'}</strong>
+            <span>${u.email || ''} ${u.telefono ? '• ' + u.telefono : ''}</span>
+            <span>${u.estado || ''} | Activo: ${u.activo ? '✅' : '❌'}</span>
+          </div>
+          <div>
+            <span class="badge ${roles[u.rol] || 'badge-refugio'}">${labels[u.rol] || u.rol}</span>
+            <div class="action-buttons" style="margin-top:6px;">
+              <button class="btn btn-outline" onclick="toggleUsuario('${u.user_id}', ${!u.activo})">${u.activo ? '❌ Suspender' : '✅ Activar'}</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function toggleUsuario(userId, activo) {
+      await sb.from('perfiles').update({ activo }).eq('user_id', userId);
+      mostrarMensaje(activo ? '✅ Usuario activado' : '❌ Usuario suspendido', 'exito');
+      cargarUsuarios();
+    }
+
+    // MODAL CREAR USUARIO
+    function abrirModalCrearUsuario() { document.getElementById('modal-crear-usuario').classList.add('active'); }
+    function cerrarModalCrear() { document.getElementById('modal-crear-usuario').classList.remove('active'); }
+
+    document.getElementById('form-crear-usuario').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const btn = this.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creando...';
+      try {
+        const email = document.getElementById('nuevo-email').value.trim().toLowerCase();
+        const password = document.getElementById('nuevo-password').value;
+        const rol = document.getElementById('nuevo-rol').value;
+        const nombre = document.getElementById('nuevo-nombre').value.trim();
+        const telefono = document.getElementById('nuevo-telefono').value.trim();
+
+        const { data: authData, error: authError } = await sb.auth.signUp({ email, password });
+        if (authError) throw authError;
+
+        await sb.from('perfiles').insert({
+          user_id: authData.user.id,
+          rol,
+          nombre_punto: nombre,
+          telefono: telefono || null,
+          activo: true
+        });
+
+        mostrarMensaje('✅ Usuario creado exitosamente', 'exito');
+        cerrarModalCrear();
+        cargarUsuarios();
+        this.reset();
+      } catch (err) {
+        mostrarMensaje('❌ ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Crear Usuario';
+      }
+    });
+
+    // INVENTARIO
+    async function cargarInventario() {
+      const lista = document.getElementById('lista-inventario');
+      lista.innerHTML = '<div class="loading">Cargando...</div>';
+      const { data } = await sb.from('inventario_acopio').select('*, catalogo_insumos(nombre_mostrar), perfiles(nombre_punto)').limit(50);
+      if (!data || data.length === 0) {
+        lista.innerHTML = '<div class="empty-state">Inventario vacío</div>';
+        return;
+      }
+      lista.innerHTML = data.map(i => `
+        <div class="inventory-row">
+          <div><strong>${i.catalogo_insumos?.nombre_mostrar || i.detalle}</strong><br><span style="font-size:11px;color:var(--text-muted);">${i.perfiles?.nombre_punto || 'Acopio'} | ${i.cantidad} ${i.unidad}</span></div>
+          <span style="color:${i.cantidad < 10 ? 'var(--danger)' : 'var(--success)'};font-weight:700;">${i.cantidad}</span>
+        </div>
+      `).join('');
+    }
+
+    // NECESIDADES
+    async function cargarNecesidades() {
+      const lista = document.getElementById('lista-necesidades-admin');
+      lista.innerHTML = '<div class="loading">Cargando...</div>';
+      const { data } = await sb.from('necesidades').select('*').order('creado_en', { ascending: false }).limit(30);
+      if (!data || data.length === 0) {
+        lista.innerHTML = '<div class="empty-state">No hay necesidades</div>';
+        return;
+      }
+      lista.innerHTML = data.map(n => `
+        <div class="user-item">
+          <div><strong>${n.punto}</strong> <span class="badge badge-${n.prioridad === 'alta' ? 'hospital' : n.prioridad === 'media' ? 'acopio' : 'refugio'}">${n.prioridad}</span><br><span style="font-size:12px;color:var(--text-muted);">Estado: ${n.estado} | ${new Date(n.creado_en).toLocaleString('es-VE')}</span></div>
+        </div>
+      `).join('');
+    }
+
+    // DESPACHOS
+    async function cargarDespachos() {
+      const lista = document.getElementById('lista-despachos');
+      lista.innerHTML = '<div class="loading">Cargando...</div>';
+      const { data } = await sb.from('despachos').select('*, necesidades(punto, prioridad)').order('creado_en', { ascending: false }).limit(30);
+      if (!data || data.length === 0) {
+        lista.innerHTML = '<div class="empty-state">No hay despachos</div>';
+        return;
+      }
+      lista.innerHTML = data.map(d => `
+        <div class="user-item">
+          <div><strong>Despacho #${d.id.substring(0,8)}</strong><br><span style="font-size:12px;color:var(--text-muted);">A: ${d.necesidades?.punto || 'N/A'} | Estado: ${d.estado}</span></div>
+        </div>
+      `).join('');
+    }
+
+    function guardarConfiguracion() {
+      mostrarMensaje('✅ Configuración guardada (local)', 'exito');
+    }
+
+    function mostrarMensaje(texto, tipo) {
+      const msg = document.getElementById('mensaje-global');
+      msg.innerText = texto;
+      msg.className = 'mensaje ' + tipo;
+      msg.style.display = 'block';
+      setTimeout(() => { msg.style.display = 'none'; }, 5000);
+    }
+
+    // Init
+    cargarKPIs();
+    initMapaAdmin();
+  </script>
+</body>
+</html>

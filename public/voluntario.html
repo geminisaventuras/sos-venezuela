@@ -1,0 +1,334 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voluntario Transporte</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <header>
+    <h1>🚛 Voluntario Transporte</h1>
+    <div>
+      <a href="dashboard-voluntario.html" class="back" style="margin-right:10px;">🏠 Inicio</a>
+      <a href="#" onclick="logout()" class="back">Cerrar sesión</a>
+    </div>
+  </header>
+  <main>
+    <div class="form-card" id="perfilCard">
+      <div id="perfilInfo"><p>Cargando perfil...</p></div>
+      <button id="btnEditarPerfil" class="btn-secondary">⚙️ Editar datos / ubicación</button>
+      <button id="btnToggleActivo" class="btn-secondary" style="display:none;">Estado: Activo</button>
+    </div>
+
+    <div class="form-card" id="formRegistro" style="display:none;">
+      <h2>Actualizar datos</h2>
+      <label>Teléfono:</label>
+      <input type="text" id="telefono" required placeholder="04121234567" inputmode="numeric" maxlength="15" />
+      <label>Nombre completo:</label>
+      <input type="text" id="nombre" required maxlength="100" />
+      <label>Tipo de vehículo:</label>
+      <select id="tipo_vehiculo" required>
+        <option value="moto">Moto</option>
+        <option value="carro">Carro</option>
+        <option value="camioneta">Camioneta</option>
+        <option value="bicicleta">Bicicleta</option>
+        <option value="a_pie">A pie</option>
+      </select>
+      <label>Capacidad de carga (opcional):</label>
+      <input type="text" id="capacidad" maxlength="50" placeholder="Ej: 100 kg" />
+      <label>Ubicación:</label>
+      <div class="search-box">
+        <input type="text" id="buscarDireccionRegistro" placeholder="Buscar dirección o lugar..." autocomplete="off" />
+        <div id="sugerenciasRegistro" class="dropdown-sugerencias"></div>
+        <button type="button" id="btnBuscarRegistro" class="btn-secondary">🔎</button>
+      </div>
+      <button type="button" id="btnUbicacionRegistro" class="btn-secondary">📍 Usar GPS</button>
+      <div id="mapaRegistro" style="height:200px; margin-top:8px;"></div>
+      <input type="hidden" id="latRegistro" />
+      <input type="hidden" id="lonRegistro" />
+      <button id="btnGuardarPerfil" class="btn-primary">💾 Guardar cambios</button>
+      <div id="msgRegistro" class="mensaje" style="display:none;"></div>
+    </div>
+
+    <div class="form-card">
+      <h2>Necesidades cercanas</h2>
+      <div class="search-box">
+        <input type="text" id="buscarDireccionMapa" placeholder="Buscar zona..." autocomplete="off" />
+        <div id="sugerenciasMapa" class="dropdown-sugerencias"></div>
+        <button type="button" id="btnBuscarMapa" class="btn-secondary">🔎</button>
+      </div>
+      <div class="coord-row" style="margin-top:8px;">
+        <select id="radioSelect">
+          <option value="5">5 km</option>
+          <option value="10" selected>10 km</option>
+          <option value="20">20 km</option>
+          <option value="50">50 km</option>
+        </select>
+        <button id="btnBuscarNecesidades" class="btn-primary">🔍 Buscar</button>
+      </div>
+      <div id="mapaNecesidades" style="height:300px; margin-top:8px;"></div>
+      <div id="listaNecesidades" class="lista"></div>
+      <div id="msgMapa" class="mensaje" style="display:none;"></div>
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if (!verificarSesion(['voluntario'])) throw new Error('Acceso denegado')
+
+    let perfilVoluntario = null
+    let mapaNecesidades = null
+    let marcadoresNecesidades = []
+
+    // Cargar perfil al iniciar
+    async function cargarPerfil() {
+      try {
+        const res = await apiFetch('/api/voluntarios/mi-perfil')
+        perfilVoluntario = res.data
+        mostrarPerfil()
+        // Si ya tiene ubicación, inicializar mapa de necesidades
+        if (perfilVoluntario.lat && perfilVoluntario.lon) {
+          inicializarMapaNecesidades()
+          buscarNecesidades(perfilVoluntario.lat, perfilVoluntario.lon, 10)
+        }
+      } catch(e) {
+        document.getElementById('perfilInfo').innerHTML = '<div class="alert-aviso">⚠️ Complete sus datos para empezar a ayudar.</div>'
+        document.getElementById('formRegistro').style.display = 'block'
+      }
+    }
+
+    function mostrarPerfil() {
+      const info = document.getElementById('perfilInfo')
+      info.innerHTML = `<p><strong>${perfilVoluntario.nombre}</strong> | 📞 ${perfilVoluntario.telefono}</p>
+        <p>🚚 ${perfilVoluntario.tipo_vehiculo || 'No especificado'} | Estado: ${perfilVoluntario.activo ? 'Activo' : 'Inactivo'}</p>`
+      document.getElementById('btnToggleActivo').style.display = 'inline-block'
+      document.getElementById('btnToggleActivo').textContent = perfilVoluntario.activo ? '🟢 Activo' : '🔴 Inactivo'
+    }
+
+    // Editar perfil
+    document.getElementById('btnEditarPerfil').onclick = function() {
+      const form = document.getElementById('formRegistro')
+      form.style.display = form.style.display === 'none' ? 'block' : 'none'
+      if (perfilVoluntario) {
+        document.getElementById('telefono').value = perfilVoluntario.telefono || ''
+        document.getElementById('nombre').value = perfilVoluntario.nombre || ''
+        document.getElementById('tipo_vehiculo').value = perfilVoluntario.tipo_vehiculo || 'moto'
+        document.getElementById('capacidad').value = perfilVoluntario.capacidad_carga || ''
+        if (perfilVoluntario.lat) {
+          document.getElementById('latRegistro').value = perfilVoluntario.lat
+          document.getElementById('lonRegistro').value = perfilVoluntario.lon
+          if (!window.mapaRegistro) inicializarMapaRegistro(perfilVoluntario.lat, perfilVoluntario.lon)
+          else {
+            window.mapaRegistro.setView([perfilVoluntario.lat, perfilVoluntario.lon], 15)
+            colocarMarkerRegistro(perfilVoluntario.lat, perfilVoluntario.lon)
+          }
+        }
+      }
+    }
+
+    // Cambiar estado activo
+    document.getElementById('btnToggleActivo').onclick = async function() {
+      if (!perfilVoluntario) return
+      try {
+        const body = {
+          telefono: perfilVoluntario.telefono,
+          nombre: perfilVoluntario.nombre,
+          tipo_vehiculo: perfilVoluntario.tipo_vehiculo,
+          capacidad_carga: perfilVoluntario.capacidad_carga,
+          lat: perfilVoluntario.lat,
+          lon: perfilVoluntario.lon,
+          activo: !perfilVoluntario.activo
+        }
+        await apiFetch('/api/voluntarios', { method: 'POST', body: JSON.stringify(body) })
+        perfilVoluntario.activo = !perfilVoluntario.activo
+        mostrarPerfil()
+      } catch(e) { alert('Error al cambiar estado.') }
+    }
+
+    // Mapas de registro
+    let mapaRegistro, markerRegistro
+    function inicializarMapaRegistro(lat, lon) {
+      mapaRegistro = L.map('mapaRegistro').setView([lat, lon], 15)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaRegistro)
+      mapaRegistro.on('click', e => colocarMarkerRegistro(e.latlng.lat, e.latlng.lng))
+      colocarMarkerRegistro(lat, lon)
+    }
+    function colocarMarkerRegistro(lat, lon) {
+      if (markerRegistro) mapaRegistro.removeLayer(markerRegistro)
+      markerRegistro = L.marker([lat, lon], { draggable: true }).addTo(mapaRegistro)
+      markerRegistro.on('dragend', () => {
+        const pos = markerRegistro.getLatLng()
+        document.getElementById('latRegistro').value = pos.lat.toFixed(6)
+        document.getElementById('lonRegistro').value = pos.lng.toFixed(6)
+      })
+      document.getElementById('latRegistro').value = lat.toFixed(6)
+      document.getElementById('lonRegistro').value = lon.toFixed(6)
+    }
+
+    document.getElementById('btnUbicacionRegistro').onclick = () => {
+      obtenerUbicacion((err, coords) => {
+        if (!err && coords) {
+          if (!mapaRegistro) inicializarMapaRegistro(coords.lat, coords.lon)
+          else { mapaRegistro.setView([coords.lat, coords.lon], 15); colocarMarkerRegistro(coords.lat, coords.lon) }
+          document.getElementById('buscarDireccionRegistro').value = `${coords.lat.toFixed(5)}, ${coords.lon.toFixed(5)}`
+        } else alert('GPS no disponible')
+      })
+    }
+
+    // Dropdown y búsqueda para registro
+    setupDropdown('buscarDireccionRegistro', 'sugerenciasRegistro', 'mapaRegistro', 'latRegistro', 'lonRegistro')
+    document.getElementById('btnBuscarRegistro').onclick = () => searchAddress('buscarDireccionRegistro', 'mapaRegistro', 'latRegistro', 'lonRegistro')
+
+    document.getElementById('btnGuardarPerfil').onclick = async function() {
+      const telefono = document.getElementById('telefono').value.trim()
+      if (!/^[0-9]{7,15}$/.test(telefono)) return alert('Teléfono inválido')
+      const body = {
+        telefono,
+        nombre: document.getElementById('nombre').value.trim(),
+        tipo_vehiculo: document.getElementById('tipo_vehiculo').value,
+        capacidad_carga: document.getElementById('capacidad').value.trim(),
+        lat: parseFloat(document.getElementById('latRegistro').value),
+        lon: parseFloat(document.getElementById('lonRegistro').value),
+        activo: true
+      }
+      try {
+        await apiFetch('/api/voluntarios', { method: 'POST', body: JSON.stringify(body) })
+        document.getElementById('formRegistro').style.display = 'none'
+        cargarPerfil()
+      } catch(e) { alert('Error al guardar: ' + e.message) }
+    }
+
+    // Mapa de necesidades
+    function inicializarMapaNecesidades() {
+      if (mapaNecesidades) return
+      mapaNecesidades = L.map('mapaNecesidades').setView([10.48, -66.90], 10)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaNecesidades)
+    }
+
+    async function buscarNecesidades(lat, lon, radio) {
+      marcadoresNecesidades.forEach(m => mapaNecesidades.removeLayer(m))
+      marcadoresNecesidades = []
+      const lista = document.getElementById('listaNecesidades')
+      lista.innerHTML = 'Buscando...'
+      try {
+        const res = await apiFetch(`/api/voluntarios/necesidades-cercanas?lat=${lat}&lon=${lon}&radio=${radio}`)
+        if (res.data.length === 0) { lista.innerHTML = 'No hay necesidades en esta zona.'; return }
+
+        res.data.forEach(n => {
+          const marker = L.marker([n.lat, n.lon]).addTo(mapaNecesidades)
+            .bindPopup(`<b>${n.punto}</b><br>${n.items.map(i => (i.detalle || i.tipo) + ': ' + i.cantidad).join('<br>')}<br>Prioridad: ${n.prioridad}`)
+          marcadoresNecesidades.push(marker)
+        })
+        const grupo = L.featureGroup(marcadoresNecesidades)
+        mapaNecesidades.fitBounds(grupo.getBounds(), { padding: [30, 30] })
+
+        lista.innerHTML = res.data.map(n => `
+          <div class="necesidad-item">
+            <strong>${n.punto} (${n.distancia_km.toFixed(1)} km)</strong><br>
+            Prioridad: ${n.prioridad} | Estado: ${n.estado}<br>
+            Insumos: ${n.items.map(i => (i.detalle || i.tipo) + ': ' + i.cantidad + ' ' + i.unidad).join(', ')}<br>
+            <button class="btn-primary" style="margin-top:5px;" onclick="tomarEntrega('${n.id}')">📦 Tomar esta entrega</button>
+          </div>`).join('')
+      } catch(e) {
+        lista.innerHTML = 'Error al buscar.'
+      }
+    }
+
+    window.tomarEntrega = async function(necesidadId) {
+      if (!perfilVoluntario) { alert('Complete su perfil primero.'); return }
+      try {
+        const body = { idempotencyKey: generarUUID(), voluntario_telefono: perfilVoluntario.telefono, necesidad_id: necesidadId }
+        const res = await apiFetch('/api/entregas', { method: 'POST', body: JSON.stringify(body) })
+        alert('✅ Entrega asignada. ID: ' + res.data.id)
+        buscarNecesidades(perfilVoluntario.lat || 10.48, perfilVoluntario.lon || -66.90, parseInt(document.getElementById('radioSelect').value))
+      } catch(e) { alert('Error: ' + e.message) }
+    }
+
+    document.getElementById('btnBuscarNecesidades').onclick = () => {
+      const lat = perfilVoluntario?.lat || 10.48
+      const lon = perfilVoluntario?.lon || -66.90
+      if (!mapaNecesidades) inicializarMapaNecesidades()
+      buscarNecesidades(lat, lon, parseInt(document.getElementById('radioSelect').value))
+    }
+
+    setupDropdown('buscarDireccionMapa', 'sugerenciasMapa', 'mapaNecesidades', null, null, true)
+    document.getElementById('btnBuscarMapa').onclick = () => searchAddress('buscarDireccionMapa', 'mapaNecesidades', null, null, true)
+
+    // Funciones auxiliares para dropdown y búsqueda
+    function setupDropdown(inputId, sugerenciasId, mapContainerId, latInputId, lonInputId, esMapaBusqueda = false) {
+      const input = document.getElementById(inputId)
+      const sugerenciasDiv = document.getElementById(sugerenciasId)
+      let debounceTimer
+      input.addEventListener('input', function() {
+        clearTimeout(debounceTimer)
+        const texto = this.value.trim()
+        if (texto.length < 3) { sugerenciasDiv.innerHTML = ''; sugerenciasDiv.style.display = 'none'; return }
+        debounceTimer = setTimeout(async () => {
+          try {
+            const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(texto))
+            const data = await res.json()
+            if (!data || data.length === 0) { sugerenciasDiv.innerHTML = ''; sugerenciasDiv.style.display = 'none'; return }
+            sugerenciasDiv.innerHTML = data.slice(0, 5).map(item => `<div class="sugerencia-item" data-lat="${item.lat}" data-lon="${item.lon}" data-display="${item.display_name.replace(/"/g, '&quot;')}">${item.display_name}</div>`).join('')
+            sugerenciasDiv.style.display = 'block'
+          } catch { sugerenciasDiv.innerHTML = ''; sugerenciasDiv.style.display = 'none' }
+        }, 300)
+      })
+      sugerenciasDiv.addEventListener('click', function(e) {
+        const item = e.target.closest('.sugerencia-item')
+        if (!item) return
+        const lat = parseFloat(item.dataset.lat), lon = parseFloat(item.dataset.lon)
+        const display = item.dataset.display.replace(/&quot;/g, '"')
+        input.value = display
+        if (esMapaBusqueda) {
+          if (!mapaNecesidades) inicializarMapaNecesidades()
+          mapaNecesidades.setView([lat, lon], 13)
+          buscarNecesidades(lat, lon, parseInt(document.getElementById('radioSelect').value))
+        } else {
+          if (!mapaRegistro) inicializarMapaRegistro(lat, lon)
+          else { mapaRegistro.setView([lat, lon], 15); colocarMarkerRegistro(lat, lon) }
+          if (latInputId) document.getElementById(latInputId).value = lat.toFixed(6)
+          if (lonInputId) document.getElementById(lonInputId).value = lon.toFixed(6)
+        }
+        sugerenciasDiv.innerHTML = ''; sugerenciasDiv.style.display = 'none'
+      })
+    }
+
+    async function searchAddress(inputId, mapContainerId, latInputId, lonInputId, esBusqueda = false) {
+      const q = document.getElementById(inputId).value.trim()
+      if (!q) return alert('Escriba una dirección')
+      try {
+        const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q))
+        const data = await res.json()
+        if (data.length > 0) {
+          const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon)
+          document.getElementById(inputId).value = data[0].display_name
+          if (esBusqueda) {
+            if (!mapaNecesidades) inicializarMapaNecesidades()
+            mapaNecesidades.setView([lat, lon], 13)
+            buscarNecesidades(lat, lon, parseInt(document.getElementById('radioSelect').value))
+          } else {
+            if (mapContainerId === 'mapaRegistro') {
+              if (!mapaRegistro) inicializarMapaRegistro(lat, lon)
+              else { mapaRegistro.setView([lat, lon], 15); colocarMarkerRegistro(lat, lon) }
+              if (latInputId) document.getElementById(latInputId).value = lat.toFixed(6)
+              if (lonInputId) document.getElementById(lonInputId).value = lon.toFixed(6)
+            }
+          }
+        } else alert('Sin resultados')
+      } catch { alert('Error de red') }
+    }
+
+    // Cerrar sugerencias global
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.search-box')) {
+        document.querySelectorAll('.dropdown-sugerencias').forEach(d => { d.innerHTML = ''; d.style.display = 'none' })
+      }
+    })
+
+    cargarPerfil()
+  </script>
+</body>
+</html>

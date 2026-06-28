@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Iniciar Sesión</title>
+</head>
+<body>
+    <h2>Iniciar Sesión</h2>
+    <input type="email" id="email" placeholder="Correo"><br><br>
+    <input type="password" id="password" placeholder="Contraseña"><br><br>
+    <button id="btn-entrar">Entrar</button>
+    <p id="mensaje"></p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://kxqwxiolouhrwddaqynp.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_iJt58cRTDAYH_j_Mv1bJ4g_g0HdRlBF';
+        
+        const clienteSupa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        document.getElementById('btn-entrar').onclick = async () => {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            const msg = document.getElementById('mensaje');
+            
+            msg.innerText = "Entrando...";
+            const { data, error } = await clienteSupa.auth.signInWithPassword({ 
+                email: email, 
+                password: pass 
+            });
+            
+            if (error) {
+                msg.innerText = "Error: " + error.message;
+            } else {
+                // Guardar directamente en el navegador
+                localStorage.setItem('authToken', data.session.access_token);
+                localStorage.setItem('perfil', JSON.stringify({ email: email, rol: 'refugio' }));
+                msg.innerText = "¡Éxito! Redirigiendo...";
+                window.location.href = '/dashboard-refugio.html';
+            }
+        };
+    </script>
+</body>
+</html>

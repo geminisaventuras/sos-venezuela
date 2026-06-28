@@ -1,0 +1,24 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ayuda Terremoto</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <script src="app.js"></script>
+  <script>
+    if (!authToken || !perfil) {
+      window.location.href = '/login.html';
+    } else {
+      // Redirigir según rol
+      const r = perfil.rol;
+      if (r === 'refugio' || r === 'centro_salud') window.location.href = '/necesidad.html';
+      else if (r === 'centro_acopio') window.location.href = '/donacion.html';
+      else if (r === 'voluntario') window.location.href = '/voluntario.html';
+      else window.location.href = '/login.html';
+    }
+  </script>
+</body>
+</html>

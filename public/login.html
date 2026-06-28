@@ -1,0 +1,368 @@
+﻿<!-- @build: 2026-06-30.05-00-00 | id: B31-LOGIN-DIRECCIONES | desc: Registro con dropdown de direcciones y GPS funcionando -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso - Ayuda Terremoto</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: sans-serif; margin: 0; background: #f4f4f9; }
+        header { background: #dc2626; color: white; padding: 15px; text-align: center; }
+        main { padding: 20px; max-width: 500px; margin: 0 auto; }
+        .form-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input, select, button { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        .btn-primary { background: #2563eb; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+        .btn-secondary { background: #e5e7eb; color: #333; border: none; cursor: pointer; }
+        .mensaje { padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 14px; }
+        .mensaje.error { background: #fee; color: #c33; border: 1px solid #fcc; }
+        .mensaje.exito { background: #efe; color: #3c3; border: 1px solid #cfc; }
+        .search-box { position: relative; }
+        .search-box input { width: 100%; }
+        .search-box button { width: auto; padding: 10px 15px; }
+        .dropdown-sugerencias { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-top: none; z-index: 1000; display: none; max-height: 200px; overflow-y: auto; }
+        .sugerencia-item { padding: 0.5rem; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid #eee; }
+        .sugerencia-item:hover { background: #f0f0f0; }
+        a { color: #2563eb; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <header><h1>🆘 Acceso - Ayuda Humanitaria</h1></header>
+    <main>
+        <div class="form-card" id="loginForm">
+            <h2>Iniciar sesión</h2>
+            <input type="email" id="loginEmail" placeholder="Correo electrónico" required>
+            <input type="password" id="loginPassword" placeholder="Contraseña" required>
+            <button id="btnLogin" class="btn-primary">Ingresar</button>
+            <p><a id="linkRegistro">¿No tiene cuenta? Regístrese</a></p>
+            <div id="msgLogin" class="mensaje" style="display:none;"></div>
+        </div>
+
+        <div class="form-card" id="registroForm" style="display:none;">
+            <h2>Registro</h2>
+            <input type="email" id="regEmail" placeholder="Correo electrónico" required>
+            <input type="password" id="regPassword" placeholder="Contraseña (mínimo 8 caracteres)" required minlength="8">
+            <select id="regRol" required>
+                <option value="">Seleccione rol...</option>
+                <option value="donante">Donante</option>
+                <option value="refugio">Refugio</option>
+                <option value="centro_salud">Centro de Salud</option>
+                <option value="centro_acopio">Centro de Acopio</option>
+                <option value="voluntario">Voluntario Transporte</option>
+            </select>
+            <div id="camposExtra" style="display:block;">
+                <input type="text" id="regNombre" placeholder="Nombre completo o del punto" maxlength="100" required>
+                <input type="tel" id="regTelefono" placeholder="Teléfono (obligatorio)" maxlength="15" pattern="[0-9]{7,15}" required>
+                <div class="search-box">
+                    <input type="text" id="buscarDireccion" placeholder="Buscar dirección (opcional)" autocomplete="off">
+                    <div id="sugerencias" class="dropdown-sugerencias"></div>
+                </div>
+                <button type="button" id="btnGPS" class="btn-secondary" style="margin-top: 8px;">📍 Usar mi ubicación actual</button>
+                <div id="mapa" style="height:200px; display:none; margin-top:10px; border-radius:5px;"></div>
+                <input type="hidden" id="lat">
+                <input type="hidden" id="lon">
+            </div>
+            <button id="btnRegistro" class="btn-primary">Registrarse</button>
+            <p><a id="linkLogin">Volver al inicio de sesión</a></p>
+            <div id="msgRegistro" class="mensaje" style="display:none;"></div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+    <script>
+        const sb = supabase.createClient('https://kxqwxiolouhrwddaqynp.supabase.co', 'sb_publishable_iJt58cRTDAYH_j_Mv1bJ4g_g0HdRlBF');
+
+        document.getElementById('linkRegistro').onclick = e => {
+            e.preventDefault();
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registroForm').style.display = 'block';
+        };
+        document.getElementById('linkLogin').onclick = e => {
+            e.preventDefault();
+            document.getElementById('registroForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+        };
+
+        // Los campos extra se muestran siempre
+        document.getElementById('camposExtra').style.display = 'block';
+
+        let map, marker;
+
+        // ---- AUTOCOMPLETADO DE DIRECCIONES (Nominatim) ----
+        (function setupAutocompletado() {
+            const input = document.getElementById('buscarDireccion');
+            const sugerenciasDiv = document.getElementById('sugerencias');
+            let debounceTimer;
+
+            input.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                const texto = this.value.trim();
+                if (texto.length < 3) {
+                    sugerenciasDiv.innerHTML = '';
+                    sugerenciasDiv.style.display = 'none';
+                    return;
+                }
+                debounceTimer = setTimeout(async () => {
+                    try {
+                        const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(texto) + '&countrycodes=ve');
+                        const data = await res.json();
+                        if (!data || data.length === 0) {
+                            sugerenciasDiv.innerHTML = '';
+                            sugerenciasDiv.style.display = 'none';
+                            return;
+                        }
+                        sugerenciasDiv.innerHTML = data.slice(0, 5).map(item => `
+                            <div class="sugerencia-item" data-lat="${item.lat}" data-lon="${item.lon}" data-display="${item.display_name.replace(/"/g, '&quot;')}">
+                                ${item.display_name}
+                            </div>
+                        `).join('');
+                        sugerenciasDiv.style.display = 'block';
+                    } catch {
+                        sugerenciasDiv.innerHTML = '';
+                        sugerenciasDiv.style.display = 'none';
+                    }
+                }, 300);
+            });
+
+            sugerenciasDiv.addEventListener('click', function(e) {
+                const item = e.target.closest('.sugerencia-item');
+                if (!item) return;
+                const lat = parseFloat(item.getAttribute('data-lat'));
+                const lon = parseFloat(item.getAttribute('data-lon'));
+                const display = item.getAttribute('data-display').replace(/&quot;/g, '"');
+                input.value = display;
+                document.getElementById('lat').value = lat.toFixed(6);
+                document.getElementById('lon').value = lon.toFixed(6);
+                sugerenciasDiv.innerHTML = '';
+                sugerenciasDiv.style.display = 'none';
+
+                // Si el mapa ya está visible, centrarlo en la ubicación seleccionada
+                if (map && document.getElementById('mapa').style.display !== 'none') {
+                    initMap(lat, lon);
+                }
+            });
+
+            // Cerrar sugerencias al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (!document.getElementById('buscarDireccion').contains(e.target) && !sugerenciasDiv.contains(e.target)) {
+                    sugerenciasDiv.innerHTML = '';
+                    sugerenciasDiv.style.display = 'none';
+                }
+            });
+        })();
+
+        // ---- MAPA Y GPS ----
+        function initMap(lat, lon) {
+            document.getElementById('mapa').style.display = 'block';
+            if (map) map.remove();
+            map = L.map('mapa').setView([lat, lon], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+            map.on('click', e => placeMarker(e.latlng.lat, e.latlng.lng));
+            placeMarker(lat, lon);
+        }
+
+        function placeMarker(lat, lon) {
+            if (marker) map.removeLayer(marker);
+            marker = L.marker([lat, lon], { draggable: true }).addTo(map);
+            marker.on('dragend', () => {
+                const p = marker.getLatLng();
+                document.getElementById('lat').value = p.lat.toFixed(6);
+                document.getElementById('lon').value = p.lng.toFixed(6);
+
+                // Geocodificación inversa al soltar el marcador
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${p.lat.toFixed(6)}&lon=${p.lng.toFixed(6)}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d && d.display_name) {
+                            document.getElementById('buscarDireccion').value = d.display_name;
+                        }
+                    });
+            });
+            document.getElementById('lat').value = lat.toFixed(6);
+            document.getElementById('lon').value = lon.toFixed(6);
+        }
+
+        document.getElementById('btnGPS').onclick = () => {
+            if (!navigator.geolocation) {
+                alert('Geolocalización no soportada por este navegador.');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    initMap(pos.coords.latitude, pos.coords.longitude);
+                    // Geocodificación inversa para rellenar dirección
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`)
+                        .then(r => r.json())
+                        .then(d => {
+                            if (d && d.display_name) {
+                                document.getElementById('buscarDireccion').value = d.display_name;
+                            }
+                        });
+                },
+                err => {
+                    alert('No se pudo obtener la ubicación GPS. Verifique los permisos de su navegador.');
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        };
+
+        function redirigirSegunRol(rol) {
+            if (rol === 'super_admin') window.location.href = '/dashboard-admin.html';
+            else if (rol === 'refugio') window.location.href = '/dashboard-refugio.html';
+            else if (rol === 'centro_salud') window.location.href = '/dashboard-hospital.html';
+            else if (rol === 'centro_acopio') window.location.href = '/dashboard-acopio.html';
+            else if (rol === 'voluntario') window.location.href = '/dashboard-voluntario.html';
+            else if (rol === 'donante') window.location.href = '/dashboard-donante.html';
+            else window.location.href = '/dashboard-refugio.html';
+        }
+
+        // LOGIN
+        document.getElementById('btnLogin').onclick = async () => {
+            const btn = document.getElementById('btnLogin');
+            const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+            const pw = document.getElementById('loginPassword').value;
+            const msg = document.getElementById('msgLogin');
+            msg.style.display = 'none';
+
+            if (!email.includes('@')) {
+                msg.innerHTML = '❌ Correo inválido';
+                msg.className = 'mensaje error';
+                msg.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Ingresando...';
+
+            try {
+                const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+                if (error) throw error;
+
+                const res = await fetch('http://localhost:3000/api/perfil', {
+                    headers: { Authorization: 'Bearer ' + data.session.access_token }
+                });
+                if (!res.ok) {
+                    await sb.auth.signOut();
+                    if (res.status === 404) throw new Error('Perfil no encontrado. Contacte al administrador.');
+                    throw new Error('Error al obtener el perfil');
+                }
+                const perfilData = await res.json();
+                if (!perfilData.success || !perfilData.data || !perfilData.data.rol) {
+                    await sb.auth.signOut();
+                    throw new Error('Perfil incompleto. No se puede determinar el rol.');
+                }
+                setAuth(data.session.access_token, perfilData.data);
+                redirigirSegunRol(perfilData.data.rol);
+            } catch (e) {
+                let textoError = e.message || 'Error desconocido';
+                if (textoError.includes('Invalid login credentials')) textoError = 'Correo o contraseña incorrectos';
+                msg.innerHTML = '❌ ' + textoError;
+                msg.className = 'mensaje error';
+                msg.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Ingresar';
+            }
+        };
+
+        // REGISTRO
+        document.getElementById('btnRegistro').onclick = async function() {
+            const btn = this;
+            btn.disabled = true;
+            btn.textContent = 'Registrando...';
+
+            const email = document.getElementById('regEmail').value.trim().toLowerCase();
+            const pw = document.getElementById('regPassword').value;
+            const rol = document.getElementById('regRol').value;
+            const msg = document.getElementById('msgRegistro');
+            msg.style.display = 'none';
+
+            if (!email.includes('@') || pw.length < 8 || !rol) {
+                msg.innerHTML = '❌ Complete todos los campos correctamente';
+                msg.className = 'mensaje error';
+                msg.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Registrarse';
+                return;
+            }
+
+            const nombreInput = document.getElementById('regNombre').value.trim();
+            const telefonoInput = document.getElementById('regTelefono').value.trim();
+
+            if (!nombreInput || !telefonoInput) {
+                msg.innerHTML = '❌ El nombre y teléfono son obligatorios';
+                msg.className = 'mensaje error';
+                msg.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Registrarse';
+                return;
+            }
+
+            try {
+                const { data, error } = await sb.auth.signUp({ email, password: pw });
+                if (error) throw error;
+
+                const token = data.session.access_token;
+                const perfil = {
+                    rol: rol,
+                    nombre: nombreInput,
+                    telefono: telefonoInput
+                };
+
+                const lat = parseFloat(document.getElementById('lat').value);
+                const lon = parseFloat(document.getElementById('lon').value);
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    perfil.lat = lat;
+                    perfil.lon = lon;
+                }
+
+                const res = await fetch('http://localhost:3000/api/perfil', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer ' + token
+                    },
+                    body: JSON.stringify(perfil)
+                });
+                if (!res.ok) {
+                    await sb.auth.signOut();
+                    const errorData = await res.json().catch(() => ({}));
+                    throw new Error(errorData.error?.message || 'Error al guardar el perfil');
+                }
+                const perfilData = await res.json();
+                setAuth(token, perfilData.data);
+                redirigirSegunRol(rol);
+            } catch (e) {
+                let textoError = e.message || 'Error desconocido';
+                if (textoError.includes('already registered') || textoError.includes('already been registered')) {
+                    msg.innerHTML = '⚠️ Este correo ya está registrado. <a id="linkIrLogin">Haga clic aquí para iniciar sesión</a>';
+                    msg.className = 'mensaje error';
+                    msg.style.display = 'block';
+                    setTimeout(() => {
+                        const link = document.getElementById('linkIrLogin');
+                        if (link) {
+                            link.onclick = (ev) => {
+                                ev.preventDefault();
+                                document.getElementById('registroForm').style.display = 'none';
+                                document.getElementById('loginForm').style.display = 'block';
+                                document.getElementById('loginEmail').value = email;
+                            };
+                        }
+                    }, 100);
+                } else {
+                    msg.innerHTML = '❌ ' + textoError;
+                    msg.className = 'mensaje error';
+                    msg.style.display = 'block';
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Registrarse';
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+{"idempotencyKey":"aaaa1111-a11a-11a1-a111-111111111111","punto":"Refugio Prueba","ubicacion":{"lat":10.48,"lon":-66.90},"items":[{"tipo":"agua_potable","cantidad":50,"unidad":"litros"}],"prioridad":"alta"}
