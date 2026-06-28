@@ -1,4 +1,4 @@
-// @build: 2026-06-27.16-00-00 | id: PWA-UTILS | desc: Utilidades globales (sin autenticaci�n)
+﻿// @build: 2026-06-27.16-00-00 | id: PWA-UTILS | desc: Utilidades globales (sin autenticación)
 const API_BASE = 'https://sos-venezuela-backend.onrender.com'
 let authToken = localStorage.getItem('authToken')
 let perfil = JSON.parse(localStorage.getItem('perfil') || 'null')

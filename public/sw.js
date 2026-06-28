@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sos-venezuela-v2';
+﻿const CACHE_NAME = 'sos-venezuela-v2';
 const ASSETS = [
   '/',
   '/index.html',
@@ -29,7 +29,7 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Eliminando cach� antigua:', cacheName);
+            console.log('Eliminando caché antigua:', cacheName);
             return caches.delete(cacheName);
           }
         })

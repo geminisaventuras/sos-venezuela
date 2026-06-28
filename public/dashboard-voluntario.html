@@ -1,4 +1,4 @@
-<!-- @build: 2026-06-30.11-00-00 | id: B25-VOLUNTARIO-FINAL-CONFIRMAR | desc: Dashboard Transportista con confirmaciÛn de recogida agregada sin quitar nada -->
+Ôªø<!-- @build: 2026-06-30.11-00-00 | id: B25-VOLUNTARIO-FINAL-CONFIRMAR | desc: Dashboard Transportista con confirmaci√≥n de recogida agregada sin quitar nada -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -68,10 +68,10 @@
   <header class="header">
     <h1>SOS <span>Venezuela</span></h1>
     <div class="header-actions">
-      <button class="icon-btn" onclick="actualizarUbicacionGPS()" title="Actualizar mi ubicaciÛn">
+      <button class="icon-btn" onclick="actualizarUbicacionGPS()" title="Actualizar mi ubicaci√≥n">
         <i class="fa-solid fa-location-crosshairs"></i>
       </button>
-      <button class="icon-btn" onclick="logout()" title="Cerrar sesiÛn">
+      <button class="icon-btn" onclick="logout()" title="Cerrar sesi√≥n">
         <i class="fa-solid fa-right-from-bracket"></i>
       </button>
       <div class="avatar" id="voluntario-avatar">VL</div>
@@ -81,10 +81,10 @@
   <div class="container">
     <div id="mensaje-global" class="mensaje"></div>
 
-    <!-- SECCI”N INICIO -->
+    <!-- SECCI√ìN INICIO -->
     <div class="section active" id="section-inicio">
       <div id="aviso-perfil" class="alert-aviso" style="display:none;">
-        ?? Completa tu perfil de transporte para empezar a ayudar.
+        ‚ö†Ô∏è Completa tu perfil de transporte para empezar a ayudar.
       </div>
       <div class="stats-grid">
         <div class="stat-card">
@@ -100,7 +100,7 @@
         <h2><i class="fa-solid fa-id-card" style="color:var(--accent);"></i> Mi Perfil</h2>
         <div id="perfil-info"><div class="loading">Cargando...</div></div>
         <button class="btn btn-success" style="margin-top:12px;" onclick="mostrarSeccion('perfil')">
-          ?? Editar Perfil
+          ‚öôÔ∏è Editar Perfil
         </button>
       </div>
       <div class="card">
@@ -109,33 +109,33 @@
       </div>
     </div>
 
-    <!-- SECCI”N RECOLECCI”N -->
+    <!-- SECCI√ìN RECOLECCI√ìN -->
     <div class="section" id="section-recoleccion">
       <div class="card">
         <h2><i class="fa-solid fa-hand-holding-heart" style="color:var(--danger);"></i> Donaciones por recoger</h2>
         <div class="search-box" style="margin-bottom:12px;">
           <input type="text" id="buscar-direccion-rec" placeholder="Buscar zona en Venezuela...">
-          <button class="btn btn-primary" onclick="buscarDireccion('rec')" style="width:auto;">??</button>
+          <button class="btn btn-primary" onclick="buscarDireccion('rec')" style="width:auto;">üîé</button>
         </div>
         <div class="map" id="mapa-recoleccion"></div>
         <div id="lista-recolecciones"><div class="loading">Cargando recolecciones...</div></div>
       </div>
     </div>
 
-    <!-- SECCI”N DISTRIBUCI”N -->
+    <!-- SECCI√ìN DISTRIBUCI√ìN -->
     <div class="section" id="section-distribucion">
       <div class="card">
         <h2><i class="fa-solid fa-boxes-packing" style="color:var(--success);"></i> Despachos por distribuir</h2>
         <div class="search-box" style="margin-bottom:12px;">
           <input type="text" id="buscar-direccion-dis" placeholder="Buscar zona en Venezuela...">
-          <button class="btn btn-primary" onclick="buscarDireccion('dis')" style="width:auto;">??</button>
+          <button class="btn btn-primary" onclick="buscarDireccion('dis')" style="width:auto;">üîé</button>
         </div>
         <div class="map" id="mapa-distribucion"></div>
         <div id="lista-distribuciones"><div class="loading">Cargando despachos...</div></div>
       </div>
     </div>
 
-    <!-- SECCI”N PERFIL -->
+    <!-- SECCI√ìN PERFIL -->
     <div class="section" id="section-perfil">
       <div class="card">
         <h2><i class="fa-solid fa-user-gear" style="color:var(--accent);"></i> Datos de Transporte</h2>
@@ -145,17 +145,17 @@
             <input type="text" id="perfil-nombre" required maxlength="100">
           </div>
           <div class="form-group">
-            <label>TelÈfono</label>
+            <label>Tel√©fono</label>
             <input type="text" id="perfil-telefono" required inputmode="numeric" pattern="[0-9]{7,15}">
           </div>
           <div class="form-group">
-            <label>Tipo de VehÌculo</label>
+            <label>Tipo de Veh√≠culo</label>
             <select id="perfil-vehiculo" required>
-              <option value="moto">??? Moto</option>
-              <option value="carro">?? Carro</option>
-              <option value="camioneta">?? Camioneta</option>
-              <option value="bicicleta">?? Bicicleta</option>
-              <option value="a_pie">?? A pie</option>
+              <option value="moto">üèçÔ∏è Moto</option>
+              <option value="carro">üöó Carro</option>
+              <option value="camioneta">üöõ Camioneta</option>
+              <option value="bicicleta">üö≤ Bicicleta</option>
+              <option value="a_pie">üö∂ A pie</option>
             </select>
           </div>
           <div class="form-group">
@@ -163,15 +163,15 @@
             <input type="text" id="perfil-capacidad" placeholder="Ej: 100 kg">
           </div>
           <div class="form-group">
-            <label>UbicaciÛn</label>
+            <label>Ubicaci√≥n</label>
             <button type="button" class="btn btn-primary" onclick="obtenerUbicacionGPS()">
-              ?? Usar mi ubicaciÛn actual
+              üìç Usar mi ubicaci√≥n actual
             </button>
             <input type="hidden" id="perfil-lat">
             <input type="hidden" id="perfil-lon">
             <p id="perfil-coords" style="font-size:12px;color:var(--text-muted);margin-top:6px;"></p>
           </div>
-          <button type="submit" class="btn btn-success">?? Guardar Perfil</button>
+          <button type="submit" class="btn btn-success">üíæ Guardar Perfil</button>
         </form>
       </div>
     </div>
@@ -198,7 +198,7 @@
 
     document.getElementById('voluntario-avatar').innerText = (perfil.nombre_punto || 'VL').substring(0, 2).toUpperCase();
 
-    // Actualizar ubicaciÛn GPS desde el header
+    // Actualizar ubicaci√≥n GPS desde el header
     async function actualizarUbicacionGPS() {
       if (!navigator.geolocation) {
         mostrarMensaje('GPS no soportado', 'error');
@@ -220,22 +220,22 @@
           });
           perfil.lat = lat;
           perfil.lon = lon;
-          mostrarMensaje('?? UbicaciÛn actualizada', 'exito');
+          mostrarMensaje('üìç Ubicaci√≥n actualizada', 'exito');
           if (perfilVoluntario) {
             perfilVoluntario.lat = lat;
             perfilVoluntario.lon = lon;
           }
         } catch (e) {
-          mostrarMensaje('? Error al actualizar ubicaciÛn', 'error');
+          mostrarMensaje('‚ùå Error al actualizar ubicaci√≥n', 'error');
         }
       }, () => {
-        mostrarMensaje('No se pudo obtener la ubicaciÛn', 'error');
+        mostrarMensaje('No se pudo obtener la ubicaci√≥n', 'error');
       }, { enableHighAccuracy: true, timeout: 10000 });
     }
 
     // Logout
     async function logout() {
-      if (confirm('øCerrar sesiÛn?')) {
+      if (confirm('¬øCerrar sesi√≥n?')) {
         localStorage.removeItem('authToken');
         localStorage.removeItem('perfil');
         window.location.href = '/login.html';
@@ -265,8 +265,8 @@
         document.getElementById('aviso-perfil').style.display = 'none';
         document.getElementById('perfil-info').innerHTML = `
           <p><strong>${perfilVoluntario.nombre}</strong></p>
-          <p style="font-size:14px;color:var(--text-muted);">?? ${perfilVoluntario.telefono} | ?? ${perfilVoluntario.tipo_vehiculo || 'No especificado'}</p>
-          <p style="font-size:14px;color:var(--text-muted);">Estado: ${perfilVoluntario.activo ? '?? Activo' : '?? Inactivo'}</p>
+          <p style="font-size:14px;color:var(--text-muted);">üìû ${perfilVoluntario.telefono} | üöö ${perfilVoluntario.tipo_vehiculo || 'No especificado'}</p>
+          <p style="font-size:14px;color:var(--text-muted);">Estado: ${perfilVoluntario.activo ? 'üü¢ Activo' : 'üî¥ Inactivo'}</p>
         `;
         cargarEntregas();
         cargarConteoServicios();
@@ -322,16 +322,16 @@
           let estadoDonacion = null;
 
           if (esRecoleccion && detalle) {
-            nombreDonante = detalle.perfiles?.nombre_punto || 'AnÛnimo';
-            telefonoDonante = detalle.perfiles?.telefono || 'Sin telÈfono';
-            direccion = detalle.direccion_recogida || 'Sin direcciÛn';
+            nombreDonante = detalle.perfiles?.nombre_punto || 'An√≥nimo';
+            telefonoDonante = detalle.perfiles?.telefono || 'Sin tel√©fono';
+            direccion = detalle.direccion_recogida || 'Sin direcci√≥n';
             lat = detalle.lat_recogida;
             lon = detalle.lon_recogida;
             estadoDonacion = detalle.estado;
           } else if (!esRecoleccion && detalle) {
             nombreDonante = detalle.punto || 'Destino';
             telefonoDonante = 'N/A';
-            direccion = detalle.punto || 'Sin direcciÛn';
+            direccion = detalle.punto || 'Sin direcci√≥n';
             lat = detalle.lat;
             lon = detalle.lon;
           }
@@ -340,20 +340,20 @@
             ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}" target="_blank" class="btn btn-navigate"><i class="fa-solid fa-map-pin"></i> Navegar</a>`
             : '';
 
-          // NUEVO: BotÛn de confirmar recogida si la donaciÛn est· en estado 'asignada'
+          // NUEVO: Bot√≥n de confirmar recogida si la donaci√≥n est√° en estado 'asignada'
           const botonConfirmar = (esRecoleccion && estadoDonacion === 'asignada')
-            ? `<button class="btn btn-success" style="margin-top:8px;" onclick="confirmarRecogida('${e.donacion_id}')">? Confirmar recogida</button>`
+            ? `<button class="btn btn-success" style="margin-top:8px;" onclick="confirmarRecogida('${e.donacion_id}')">‚úÖ Confirmar recogida</button>`
             : '';
 
           return `
             <div class="entrega-item">
               <div class="entrega-header">
-                <strong>${esRecoleccion ? 'RecolecciÛn' : 'DistribuciÛn'} #${e.id.substring(0,8)}</strong>
+                <strong>${esRecoleccion ? 'Recolecci√≥n' : 'Distribuci√≥n'} #${e.id.substring(0,8)}</strong>
                 <span class="badge badge-${esRecoleccion ? 'recogida' : 'distribucion'}">${estado}</span>
               </div>
-              <p style="font-size:13px;color:var(--text-muted);">?? ${nombreDonante} | ?? ${telefonoDonante}</p>
-              <p style="font-size:13px;color:var(--text-muted);">?? ${direccion}</p>
-              <p style="font-size:12px;color:#94a3b8;">?? ${fecha}</p>
+              <p style="font-size:13px;color:var(--text-muted);">üë§ ${nombreDonante} | üìû ${telefonoDonante}</p>
+              <p style="font-size:13px;color:var(--text-muted);">üìç ${direccion}</p>
+              <p style="font-size:12px;color:#94a3b8;">üìÖ ${fecha}</p>
               ${navegacion}
               ${botonConfirmar}
             </div>
@@ -364,14 +364,14 @@
       }
     }
 
-    // NUEVA FUNCI”N: Confirmar recogida
+    // NUEVA FUNCI√ìN: Confirmar recogida
     window.confirmarRecogida = async function(donacionId) {
       try {
         const res = await apiFetch('/api/donaciones/' + donacionId + '/recoger', { method: 'PATCH' });
-        mostrarMensaje('? Recogida confirmada. Ahora puedes llevarlo al acopio.', 'exito');
+        mostrarMensaje('‚úÖ Recogida confirmada. Ahora puedes llevarlo al acopio.', 'exito');
         cargarEntregas(); // Refrescar la lista
       } catch (e) {
-        mostrarMensaje('? ' + e.message, 'error');
+        mostrarMensaje('‚ùå ' + e.message, 'error');
       }
     };
 
@@ -392,7 +392,7 @@
       };
     }
 
-    // MAPA RECOLECCI”N
+    // MAPA RECOLECCI√ìN
     function initMapaRecoleccion() {
       if (mapaRecoleccion) { mapaRecoleccion.invalidateSize(); return; }
       const coords = getDefaultCoords();
@@ -422,7 +422,7 @@
                 iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
               })
             }).addTo(mapaRecoleccion)
-              .bindPopup(`<b>RecolecciÛn</b><br>${d.detalle_donacion?.map(i => i.cantidad + ' ' + (i.catalogo_insumos?.nombre_mostrar || 'Insumo')).join('<br>') || 'Sin detalles'}`);
+              .bindPopup(`<b>Recolecci√≥n</b><br>${d.detalle_donacion?.map(i => i.cantidad + ' ' + (i.catalogo_insumos?.nombre_mostrar || 'Insumo')).join('<br>') || 'Sin detalles'}`);
             marcadoresRec.push(m);
           }
         });
@@ -434,10 +434,10 @@
             : '';
           return `
             <div class="entrega-item">
-              <strong>RecolecciÛn</strong><br>
+              <strong>Recolecci√≥n</strong><br>
               <span style="font-size:13px;color:var(--text-muted);">${d.detalle_donacion?.map(i => i.cantidad + ' ' + (i.catalogo_insumos?.nombre_mostrar || 'Insumo')).join(', ') || 'Sin items'}</span><br>
-              <span style="font-size:12px;color:#94a3b8;">${d.direccion_recogida || 'Sin direcciÛn'}</span><br>
-              <button class="btn btn-success" style="margin-top:8px;" onclick="tomarRecoleccion('${d.id}')">?? Tomar recolecciÛn</button>
+              <span style="font-size:12px;color:#94a3b8;">${d.direccion_recogida || 'Sin direcci√≥n'}</span><br>
+              <button class="btn btn-success" style="margin-top:8px;" onclick="tomarRecoleccion('${d.id}')">üì¶ Tomar recolecci√≥n</button>
               ${enlaceNavegacion}
             </div>
           `;
@@ -459,14 +459,14 @@
             tipo_servicio: 'recoleccion'
           })
         });
-        mostrarMensaje('? RecolecciÛn asignada. ID: ' + res.data.id, 'exito');
+        mostrarMensaje('‚úÖ Recolecci√≥n asignada. ID: ' + res.data.id, 'exito');
         cargarRecolecciones();
       } catch (e) {
-        mostrarMensaje('? ' + e.message, 'error');
+        mostrarMensaje('‚ùå ' + e.message, 'error');
       }
     };
 
-    // MAPA DISTRIBUCI”N
+    // MAPA DISTRIBUCI√ìN
     function initMapaDistribucion() {
       if (mapaDistribucion) { mapaDistribucion.invalidateSize(); return; }
       const coords = getDefaultCoords();
@@ -496,7 +496,7 @@
                 iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
               })
             }).addTo(mapaDistribucion)
-              .bindPopup(`<b>DistribuciÛn a ${d.necesidades?.punto || 'Destino'}</b><br>${d.items_despachados?.map(i => i.cantidad + ' ' + i.unidad).join('<br>') || 'Sin items'}`);
+              .bindPopup(`<b>Distribuci√≥n a ${d.necesidades?.punto || 'Destino'}</b><br>${d.items_despachados?.map(i => i.cantidad + ' ' + i.unidad).join('<br>') || 'Sin items'}`);
             marcadoresDis.push(m);
           }
         });
@@ -508,10 +508,10 @@
             : '';
           return `
             <div class="entrega-item">
-              <strong>DistribuciÛn a ${d.necesidades?.punto || 'Destino'}</strong><br>
+              <strong>Distribuci√≥n a ${d.necesidades?.punto || 'Destino'}</strong><br>
               <span style="font-size:13px;color:var(--text-muted);">${d.items_despachados?.map(i => i.cantidad + ' ' + i.unidad).join(', ') || 'Sin items'}</span><br>
               <span style="font-size:12px;color:#94a3b8;">Estado: ${d.estado}</span><br>
-              <button class="btn btn-success" style="margin-top:8px;" onclick="tomarDistribucion('${d.id}')">?? Tomar distribuciÛn</button>
+              <button class="btn btn-success" style="margin-top:8px;" onclick="tomarDistribucion('${d.id}')">üöö Tomar distribuci√≥n</button>
               ${enlaceNavegacion}
             </div>
           `;
@@ -528,17 +528,17 @@
           method: 'PATCH',
           body: JSON.stringify({ estado: 'en_transito_a_destino' })
         });
-        mostrarMensaje('? Despacho asignado.', 'exito');
+        mostrarMensaje('‚úÖ Despacho asignado.', 'exito');
         cargarDistribuciones();
       } catch (e) {
-        mostrarMensaje('? ' + e.message, 'error');
+        mostrarMensaje('‚ùå ' + e.message, 'error');
       }
     };
 
     function buscarDireccion(tipo) {
       const input = document.getElementById('buscar-direccion-' + tipo);
       const q = input.value.trim();
-      if (!q) return alert('Escriba una direcciÛn');
+      if (!q) return alert('Escriba una direcci√≥n');
       fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=ve`)
         .then(r => r.json())
         .then(data => {
@@ -547,7 +547,7 @@
             if (tipo === 'rec') { initMapaRecoleccion(); mapaRecoleccion.setView([lat, lon], 13); cargarRecolecciones(); }
             else { initMapaDistribucion(); mapaDistribucion.setView([lat, lon], 13); cargarDistribuciones(); }
             input.value = data[0].display_name;
-          } else alert('DirecciÛn no encontrada en Venezuela');
+          } else alert('Direcci√≥n no encontrada en Venezuela');
         });
     }
 
@@ -567,11 +567,11 @@
             activo: true
           })
         });
-        mostrarMensaje('? Perfil actualizado', 'exito');
+        mostrarMensaje('‚úÖ Perfil actualizado', 'exito');
         mostrarSeccion('inicio');
         cargarDatos();
       } catch (e) {
-        mostrarMensaje('? ' + e.message, 'error');
+        mostrarMensaje('‚ùå ' + e.message, 'error');
       }
     });
 
@@ -581,7 +581,7 @@
         document.getElementById('perfil-lat').value = pos.coords.latitude;
         document.getElementById('perfil-lon').value = pos.coords.longitude;
         document.getElementById('perfil-coords').innerText = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
-      }, () => alert('No se pudo obtener ubicaciÛn'), { enableHighAccuracy: true, timeout: 10000 });
+      }, () => alert('No se pudo obtener ubicaci√≥n'), { enableHighAccuracy: true, timeout: 10000 });
     }
 
     function mostrarMensaje(texto, tipo) {

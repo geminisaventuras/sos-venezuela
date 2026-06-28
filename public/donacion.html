@@ -1,4 +1,4 @@
-<!-- @build: 2026-06-28.02-30-00 | id: B28-DONACION-RESTAURADO | desc: Registro de donación con mapa Leaflet, GPS y búsqueda de dirección -->
+ï»¿<!-- @build: 2026-06-28.02-30-00 | id: B28-DONACION-RESTAURADO | desc: Registro de donaciÃ³n con mapa Leaflet, GPS y bÃºsqueda de direcciÃ³n -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10,36 +10,36 @@
 </head>
 <body>
   <header>
-    <h1>?? Centro de Acopio</h1>
-    <a href="#" onclick="logout()" class="back">Cerrar sesión</a>
+    <h1>ğŸ“¦ Centro de Acopio</h1>
+    <a href="#" onclick="logout()" class="back">Cerrar sesiÃ³n</a>
   </header>
   <main>
     <div class="form-card">
-      <h2>Registrar Donación</h2>
+      <h2>Registrar DonaciÃ³n</h2>
       <p id="nombreCentro"></p>
       <label>Centro de acopio:</label>
       <input type="text" id="centroNombre" required maxlength="100" />
-      <label>Ubicación:</label>
+      <label>UbicaciÃ³n:</label>
       <div class="search-box">
-        <input type="text" id="buscarDireccion" placeholder="Buscar dirección o lugar..." autocomplete="off" />
+        <input type="text" id="buscarDireccion" placeholder="Buscar direcciÃ³n o lugar..." autocomplete="off" />
         <div id="sugerencias" class="dropdown-sugerencias"></div>
-        <button type="button" id="btnBuscarDireccion" class="btn-secondary">?? Buscar</button>
+        <button type="button" id="btnBuscarDireccion" class="btn-secondary">ğŸ” Buscar</button>
       </div>
-      <button type="button" id="btnUbicacion" class="btn-secondary">?? Usar mi ubicación actual</button>
+      <button type="button" id="btnUbicacion" class="btn-secondary">ğŸ“ Usar mi ubicaciÃ³n actual</button>
       <div id="mapContainer" style="display:none; height:250px; margin-top:8px;"></div>
       <input type="hidden" id="lat" />
       <input type="hidden" id="lon" />
       <label>Insumos:</label>
       <div id="itemsContainer"></div>
-      <button type="button" id="addItem" class="btn-secondary">+ Añadir insumo</button>
+      <button type="button" id="addItem" class="btn-secondary">+ AÃ±adir insumo</button>
       <label>Donante (opcional):</label>
       <input type="text" id="donante" maxlength="100" />
-      <button type="button" id="submitDonacion" class="btn-primary">?? Enviar donación</button>
+      <button type="button" id="submitDonacion" class="btn-primary">ğŸ“¤ Enviar donaciÃ³n</button>
       <div id="mensajeDon" class="mensaje" style="display:none;"></div>
     </div>
     <div class="form-card">
       <h2>Necesidades pendientes</h2>
-      <button id="btnCargarNecesidades" class="btn-primary">?? Cargar todas las necesidades</button>
+      <button id="btnCargarNecesidades" class="btn-primary">ğŸ”„ Cargar todas las necesidades</button>
       <div id="listaNecesidades" class="lista"></div>
       <div id="msgNecesidades" class="mensaje" style="display:none;"></div>
     </div>
@@ -87,7 +87,7 @@
       });
       document.getElementById('lat').value = lat.toFixed(6);
       document.getElementById('lon').value = lon.toFixed(6);
-      console.log('Marcador donación colocado en', lat, lon);
+      console.log('Marcador donaciÃ³n colocado en', lat, lon);
     }
 
     document.getElementById('btnUbicacion').addEventListener('click', function() {
@@ -102,7 +102,7 @@
 
     document.getElementById('btnBuscarDireccion').addEventListener('click', function() {
       var q = document.getElementById('buscarDireccion').value.trim();
-      if (!q) return alert('Escriba una dirección.');
+      if (!q) return alert('Escriba una direcciÃ³n.');
       fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q))
         .then(r => r.json())
         .then(function(data) {
@@ -205,7 +205,7 @@
           var unidad = row.querySelector('.unidad').value;
           if (tipo && cant > 0 && unidad) items.push({ tipo: tipo, cantidad: cant, unidad: unidad, detalle: detalle || undefined });
         });
-        if (items.length === 0) throw new Error('Añada al menos un insumo');
+        if (items.length === 0) throw new Error('AÃ±ada al menos un insumo');
         var body = {
           idempotencyKey: generarUUID(),
           centro_acopio: { nombre: document.getElementById('centroNombre').value.trim(), lat: parseFloat(document.getElementById('lat').value), lon: parseFloat(document.getElementById('lon').value) },
@@ -214,12 +214,12 @@
         };
         var res = await apiFetch('/api/donaciones', { method: 'POST', body: JSON.stringify(body) });
         msg.style.display = 'block'; msg.className = 'mensaje exito';
-        msg.textContent = '? Donación registrada. ID: ' + res.data.id;
+        msg.textContent = 'âœ… DonaciÃ³n registrada. ID: ' + res.data.id;
       } catch (err) {
         msg.style.display = 'block'; msg.className = 'mensaje error';
-        msg.textContent = '? ' + (err.message || 'Error');
+        msg.textContent = 'âŒ ' + (err.message || 'Error');
       } finally {
-        btn.disabled = false; btn.textContent = '?? Enviar donación';
+        btn.disabled = false; btn.textContent = 'ğŸ“¤ Enviar donaciÃ³n';
       }
     });
 
@@ -243,7 +243,7 @@
         });
       } catch (err) {
         msg.style.display = 'block'; msg.className = 'mensaje error';
-        msg.textContent = '? ' + (err.message || 'Error al cargar necesidades');
+        msg.textContent = 'âŒ ' + (err.message || 'Error al cargar necesidades');
       }
     });
   </script>

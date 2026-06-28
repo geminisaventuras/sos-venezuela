@@ -1,4 +1,4 @@
-<!-- @build: 2026-06-28.07-30-00 | id: B20-ACOPIO-DONACIONES | desc: Dashboard Centro de Acopio con secciÛn Donaciones por recibir -->
+Ôªø<!-- @build: 2026-06-28.07-30-00 | id: B20-ACOPIO-DONACIONES | desc: Dashboard Centro de Acopio con secci√≥n Donaciones por recibir -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -85,7 +85,7 @@
   <div class="container">
     <div id="mensaje-global" class="mensaje"></div>
 
-    <!-- SECCI”N INICIO -->
+    <!-- SECCI√ìN INICIO -->
     <div class="section active" id="section-inicio">
       <div class="stats-grid">
         <div class="stat-card">
@@ -115,7 +115,7 @@
       </div>
     </div>
 
-    <!-- SECCI”N INVENTARIO -->
+    <!-- SECCI√ìN INVENTARIO -->
     <div class="section" id="section-inventario">
       <div class="card">
         <h2><i class="fa-solid fa-plus-circle" style="color:var(--success);"></i> Registrar Ingreso</h2>
@@ -139,7 +139,7 @@
           </div>
           <div class="form-group">
             <label>Donante (opcional)</label>
-            <input type="text" id="ingreso-donante" placeholder="Nombre o dejar vacÌo si es anÛnimo" maxlength="100">
+            <input type="text" id="ingreso-donante" placeholder="Nombre o dejar vac√≠o si es an√≥nimo" maxlength="100">
           </div>
           <button type="submit" class="btn btn-success" id="btn-ingreso">
             <i class="fa-solid fa-plus"></i> Registrar Ingreso
@@ -161,7 +161,7 @@
       </div>
     </div>
 
-    <!-- SECCI”N SOLICITUDES -->
+    <!-- SECCI√ìN SOLICITUDES -->
     <div class="section" id="section-solicitudes">
       <div class="card">
         <h2><i class="fa-solid fa-hand-holding-heart" style="color:var(--danger);"></i> Solicitudes Pendientes</h2>
@@ -169,7 +169,7 @@
       </div>
     </div>
 
-    <!-- SECCI”N DONACIONES POR RECIBIR (NUEVA) -->
+    <!-- SECCI√ìN DONACIONES POR RECIBIR (NUEVA) -->
     <div class="section" id="section-donaciones">
       <div class="card">
         <h2><i class="fa-solid fa-gift" style="color:var(--accent);"></i> Donaciones por recibir</h2>
@@ -181,7 +181,7 @@
   <!-- MODAL DE DESPACHO -->
   <div class="modal-overlay" id="modal-despacho">
     <div class="modal">
-      <h3>?? Preparar Despacho</h3>
+      <h3>üöö Preparar Despacho</h3>
       <p id="despacho-destino" style="color:var(--text-muted); margin-bottom:12px;"></p>
       <div id="items-despacho"></div>
       <div class="form-group" style="margin-top:16px;">
@@ -195,10 +195,10 @@
     </div>
   </div>
 
-  <!-- MODAL DE CONFIRMAR RECEPCI”N (NUEVO) -->
+  <!-- MODAL DE CONFIRMAR RECEPCI√ìN (NUEVO) -->
   <div class="modal-overlay" id="modal-confirmar">
     <div class="modal">
-      <h3>? Confirmar RecepciÛn de DonaciÛn</h3>
+      <h3>‚úÖ Confirmar Recepci√≥n de Donaci√≥n</h3>
       <p id="confirmar-info" style="color:var(--text-muted); margin-bottom:12px;"></p>
       <div id="confirmar-detalle" style="max-height: 200px; overflow-y: auto; margin-bottom: 16px;"></div>
       <div class="form-group">
@@ -210,13 +210,13 @@
         <input type="text" id="confirmar-motivo" placeholder="Ej: Cajas rotas">
       </div>
       <button class="btn btn-success" id="btn-confirmar-recepcion">
-        <i class="fa-solid fa-check"></i> Confirmar RecepciÛn
+        <i class="fa-solid fa-check"></i> Confirmar Recepci√≥n
       </button>
       <button class="btn btn-danger" style="margin-top:8px;" onclick="cerrarModalConfirmar()">Cancelar</button>
     </div>
   </div>
 
-  <!-- NAVEGACI”N INFERIOR -->
+  <!-- NAVEGACI√ìN INFERIOR -->
   <nav class="bottom-nav">
     <button class="nav-item active" data-section="inicio"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
     <button class="nav-item" data-section="inventario"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span></button>
@@ -227,7 +227,7 @@
   <script src="app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Verificar sesiÛn
+    // Verificar sesi√≥n
     if (!verificarSesion(['centro_acopio'])) throw new Error('Acceso denegado');
 
     const sb = supabase.createClient('https://kxqwxiolouhrwddaqynp.supabase.co', 'sb_publishable_iJt58cRTDAYH_j_Mv1bJ4g_g0HdRlBF');
@@ -242,7 +242,7 @@
     // Inicializar
     document.getElementById('acopio-avatar').innerText = (perfil.nombre_punto || 'AC').substring(0, 2).toUpperCase();
     
-    // NavegaciÛn
+    // Navegaci√≥n
     document.querySelectorAll('.nav-item').forEach(btn => {
       btn.addEventListener('click', () => {
         const section = btn.dataset.section;
@@ -265,7 +265,7 @@
       if (perfilData) acopioId = perfilData.user_id;
     }
 
-    // B˙squeda inteligente de cat·logo
+    // B√∫squeda inteligente de cat√°logo
     document.getElementById('buscar-insumo').addEventListener('input', function(e) {
       clearTimeout(searchTimeout);
       const query = e.target.value.trim();
@@ -309,7 +309,7 @@ const { data, error } = await sb
       document.getElementById('insumo-id').value = 'nuevo';
       document.getElementById('insumo-unidad').value = 'unidades';
       document.getElementById('search-results').style.display = 'none';
-      alert('Se registrar· como insumo nuevo: ' + nombre);
+      alert('Se registrar√° como insumo nuevo: ' + nombre);
     }
 
     document.addEventListener('click', e => { if (!e.target.closest('.search-box')) document.getElementById('search-results').style.display = 'none'; });
@@ -338,12 +338,12 @@ const { data, error } = await sb
         };
         
         const res = await apiFetch('/api/inventario/ingreso', { method: 'POST', body: JSON.stringify(body) });
-        mostrarMensaje('? Ingreso registrado. Inventario actualizado.', 'exito');
+        mostrarMensaje('‚úÖ Ingreso registrado. Inventario actualizado.', 'exito');
         this.reset();
         document.getElementById('grupo-vencimiento').style.display = 'none';
         cargarInventario();
       } catch (e) {
-        mostrarMensaje('? ' + e.message, 'error');
+        mostrarMensaje('‚ùå ' + e.message, 'error');
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-plus"></i> Registrar Ingreso';
@@ -358,7 +358,7 @@ const { data, error } = await sb
         const res = await apiFetch('/api/inventario/' + acopioId);
         inventarioActual = res.data || [];
         if (inventarioActual.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Inventario vacÌo</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Inventario vac√≠o</td></tr>';
         } else {
           tbody.innerHTML = inventarioActual.map(item => `
             <tr>
@@ -384,7 +384,7 @@ const { data, error } = await sb
         const res = await apiFetch('/api/necesidades');
         necesidadesActuales = res.data || [];
         if (necesidadesActuales.length === 0) {
-          lista.innerHTML = '<div class="empty-state">?? No hay solicitudes pendientes</div>';
+          lista.innerHTML = '<div class="empty-state">üéâ No hay solicitudes pendientes</div>';
         } else {
           lista.innerHTML = necesidadesActuales.map(nec => `
             <div class="necesidad-item">
@@ -395,9 +395,9 @@ const { data, error } = await sb
               <p style="font-size:14px;color:var(--text-muted);margin-bottom:8px;">
                 ${Array.isArray(nec.items) ? nec.items.map(i => `${i.cantidad} ${i.unidad} de ${i.detalle || i.tipo}`).join(', ') : 'Sin items'}
               </p>
-              <p style="font-size:12px;color:#94a3b8;">?? ${new Date(nec.creado_en).toLocaleString('es-VE')}</p>
+              <p style="font-size:12px;color:#94a3b8;">üìÖ ${new Date(nec.creado_en).toLocaleString('es-VE')}</p>
               <button class="btn btn-primary" style="margin-top:10px;" onclick="abrirModalDespacho('${nec.id}','${nec.punto}')">
-                ?? Preparar Despacho
+                üöö Preparar Despacho
               </button>
             </div>
           `).join('');
@@ -416,7 +416,7 @@ const { data, error } = await sb
         const res = await apiFetch('/api/donaciones?acopio_id=' + acopioId);
         donacionesActuales = res.data || [];
         if (donacionesActuales.length === 0) {
-          lista.innerHTML = '<div class="empty-state">?? No hay donaciones pendientes</div>';
+          lista.innerHTML = '<div class="empty-state">üéâ No hay donaciones pendientes</div>';
           return;
         }
         lista.innerHTML = donacionesActuales.map(don => {
@@ -430,10 +430,10 @@ const { data, error } = await sb
                 <span class="badge ${estadoClass}">${don.estado.replace(/_/g, ' ')}</span>
               </div>
               <p style="font-size:14px;color:var(--text-muted);margin-bottom:8px;">
-                Donante: ${don.donante_id ? 'Registrado' : 'AnÛnimo'} | Modo: ${don.modo_entrega}
+                Donante: ${don.donante_id ? 'Registrado' : 'An√≥nimo'} | Modo: ${don.modo_entrega}
               </p>
-              <p style="font-size:12px;color:#94a3b8;">?? ${new Date(don.creado_en).toLocaleString('es-VE')}</p>
-              ${don.estado !== 'recibida' ? `<button class="btn btn-success" style="margin-top:10px;" onclick="abrirModalConfirmar('${don.id}')">? Confirmar RecepciÛn</button>` : ''}
+              <p style="font-size:12px;color:#94a3b8;">üìÖ ${new Date(don.creado_en).toLocaleString('es-VE')}</p>
+              ${don.estado !== 'recibida' ? `<button class="btn btn-success" style="margin-top:10px;" onclick="abrirModalConfirmar('${don.id}')">‚úÖ Confirmar Recepci√≥n</button>` : ''}
             </div>
           `;
         }).join('');
@@ -492,26 +492,26 @@ const { data, error } = await sb
           items: items
         };
         await apiFetch('/api/despachos', { method: 'POST', body: JSON.stringify(body) });
-        mostrarMensaje('? Despacho creado exitosamente.', 'exito');
+        mostrarMensaje('‚úÖ Despacho creado exitosamente.', 'exito');
         cerrarModal();
         cargarInventario();
         cargarSolicitudes();
         document.getElementById('stat-despachos').innerText = parseInt(document.getElementById('stat-despachos').innerText || 0) + 1;
       } catch (e) {
-        mostrarMensaje('? ' + e.message, 'error');
+        mostrarMensaje('‚ùå ' + e.message, 'error');
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Confirmar Despacho';
       }
     });
 
-    // Modal de confirmar recepciÛn (NUEVO)
+    // Modal de confirmar recepci√≥n (NUEVO)
     function abrirModalConfirmar(donacionId) {
       donacionSeleccionada = donacionId;
       const donacion = donacionesActuales.find(d => d.id === donacionId);
       if (donacion) {
         const items = donacion.detalle_donacion || [];
-        document.getElementById('confirmar-info').innerText = `DonaciÛn de ${items.map(i => i.cantidad + ' ' + i.unidad + ' de ' + (i.catalogo_insumos?.nombre_mostrar || 'Insumo')).join(', ')}`;
+        document.getElementById('confirmar-info').innerText = `Donaci√≥n de ${items.map(i => i.cantidad + ' ' + i.unidad + ' de ' + (i.catalogo_insumos?.nombre_mostrar || 'Insumo')).join(', ')}`;
         document.getElementById('confirmar-detalle').innerHTML = items.map(i => `<div>${i.cantidad} ${i.unidad} de ${i.catalogo_insumos?.nombre_mostrar || 'Insumo'}</div>`).join('');
       }
       document.getElementById('modal-confirmar').classList.add('active');
@@ -531,15 +531,15 @@ const { data, error } = await sb
         const motivo = document.getElementById('confirmar-motivo').value.trim() || undefined;
         const body = { cantidad_rechazada: rechazo, motivo_rechazo: motivo };
         await apiFetch('/api/donaciones/' + donacionSeleccionada + '/confirmar', { method: 'PATCH', body: JSON.stringify(body) });
-        mostrarMensaje('? RecepciÛn confirmada. Inventario actualizado.', 'exito');
+        mostrarMensaje('‚úÖ Recepci√≥n confirmada. Inventario actualizado.', 'exito');
         cerrarModalConfirmar();
         cargarDonaciones();
         cargarInventario();
       } catch (e) {
-        mostrarMensaje('? ' + e.message, 'error');
+        mostrarMensaje('‚ùå ' + e.message, 'error');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar RecepciÛn';
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar Recepci√≥n';
       }
     });
 

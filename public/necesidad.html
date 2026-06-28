@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ï»¿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -9,8 +9,8 @@
 </head>
 <body>
   <header>
-    <h1>?? Reportar Necesidad</h1>
-    <a href="#" onclick="logout()" class="back">Cerrar sesión</a>
+    <h1>ğŸ“‹ Reportar Necesidad</h1>
+    <a href="#" onclick="logout()" class="back">Cerrar sesiÃ³n</a>
   </header>
   <main>
     <form id="necesidadForm" class="form-card">
@@ -22,26 +22,26 @@
         <option value="refugio">Refugio</option>
         <option value="hospital">Hospital</option>
       </select>
-      <label>Ubicación:</label>
+      <label>UbicaciÃ³n:</label>
       <div class="search-box">
-        <input type="text" id="buscarDireccion" placeholder="Buscar dirección o lugar..." autocomplete="off" />
+        <input type="text" id="buscarDireccion" placeholder="Buscar direcciÃ³n o lugar..." autocomplete="off" />
         <div id="sugerencias" class="dropdown-sugerencias"></div>
-        <button type="button" id="btnBuscarDireccion" class="btn-secondary">?? Buscar</button>
+        <button type="button" id="btnBuscarDireccion" class="btn-secondary">ğŸ” Buscar</button>
       </div>
-      <button type="button" id="btnUbicacion" class="btn-secondary">?? Usar mi ubicación actual</button>
+      <button type="button" id="btnUbicacion" class="btn-secondary">ğŸ“ Usar mi ubicaciÃ³n actual</button>
       <div id="mapContainer" style="display:none; height:250px; margin-top:8px;"></div>
       <input type="hidden" id="lat" />
       <input type="hidden" id="lon" />
-      <label>¿Qué se necesita?</label>
+      <label>Â¿QuÃ© se necesita?</label>
       <div id="itemsContainer"></div>
-      <button type="button" id="addItem" class="btn-secondary">+ Añadir insumo</button>
+      <button type="button" id="addItem" class="btn-secondary">+ AÃ±adir insumo</button>
       <label>Prioridad:</label>
       <select id="prioridad" required>
         <option value="alta">Alta</option>
         <option value="media" selected>Media</option>
         <option value="baja">Baja</option>
       </select>
-      <button type="submit" id="submitBtn" class="btn-primary">?? Enviar necesidad</button>
+      <button type="submit" id="submitBtn" class="btn-primary">ğŸš€ Enviar necesidad</button>
       <div id="mensaje" class="mensaje" style="display:none;"></div>
     </form>
   </main>
@@ -68,7 +68,7 @@
       } else {
         map.setView([lat, lon], 15);
       }
-      map.invalidateSize();  // Forzar recálculo del tamaño después de mostrar
+      map.invalidateSize();  // Forzar recÃ¡lculo del tamaÃ±o despuÃ©s de mostrar
       colocarMarcador(lat, lon);
     }
 
@@ -104,7 +104,7 @@
     document.getElementById('btnUbicacion').addEventListener('click', function() {
       obtenerUbicacion(function(err, coords) {
         if (err || !coords) {
-          alert('No se pudo obtener la ubicación. Use el mapa o la búsqueda.');
+          alert('No se pudo obtener la ubicaciÃ³n. Use el mapa o la bÃºsqueda.');
         } else {
           mostrarMapa(coords.lat, coords.lon);
           obtenerDireccion(coords.lat, coords.lon, function(dir) { if (dir) document.getElementById('buscarDireccion').value = dir; });
@@ -117,7 +117,7 @@
     });
 
     function buscarYMostrar(query) {
-      if (!query.trim()) return alert('Escriba una dirección o lugar.');
+      if (!query.trim()) return alert('Escriba una direcciÃ³n o lugar.');
       fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query))
         .then(r => r.json())
         .then(function(data) {
@@ -227,7 +227,7 @@
       try {
         var lat = parseFloat(document.getElementById('lat').value);
         var lon = parseFloat(document.getElementById('lon').value);
-        if (isNaN(lat) || isNaN(lon)) throw new Error('Debe seleccionar una ubicación.');
+        if (isNaN(lat) || isNaN(lon)) throw new Error('Debe seleccionar una ubicaciÃ³n.');
         var items = [];
         document.querySelectorAll('#itemsContainer .item-row').forEach(function(row) {
           var tipo = row.querySelector('.tipo').value;
@@ -236,7 +236,7 @@
           var unidad = row.querySelector('.unidad').value;
           if (tipo && cantidad > 0 && unidad) items.push({ tipo: tipo, cantidad: cantidad, unidad: unidad, detalle: detalle || undefined });
         });
-        if (items.length === 0) throw new Error('Añada al menos un insumo.');
+        if (items.length === 0) throw new Error('AÃ±ada al menos un insumo.');
         var body = {
           idempotencyKey: generarUUID(),
           punto: document.getElementById('punto').value.trim(),
@@ -247,14 +247,14 @@
         };
         var res = await apiFetch('/api/necesidades', { method: 'POST', body: JSON.stringify(body) });
         msg.style.display = 'block'; msg.className = 'mensaje exito';
-        msg.textContent = '? Necesidad registrada. ID: ' + res.data.id;
+        msg.textContent = 'âœ… Necesidad registrada. ID: ' + res.data.id;
         containerItems.innerHTML = ''; containerItems.appendChild(crearItemRow());
         document.getElementById('prioridad').value = 'media';
       } catch (err) {
         msg.style.display = 'block'; msg.className = 'mensaje error';
-        msg.textContent = '? ' + (err.message || 'Error de conexión');
+        msg.textContent = 'âŒ ' + (err.message || 'Error de conexiÃ³n');
       } finally {
-        btn.disabled = false; btn.textContent = '?? Enviar necesidad';
+        btn.disabled = false; btn.textContent = 'ğŸš€ Enviar necesidad';
       }
     });
   </script>

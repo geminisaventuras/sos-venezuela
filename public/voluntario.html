@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -9,26 +9,26 @@
 </head>
 <body>
   <header>
-    <h1>?? Voluntario Transporte</h1>
+    <h1>🚛 Voluntario Transporte</h1>
     <div>
-      <a href="dashboard-voluntario.html" class="back" style="margin-right:10px;">?? Inicio</a>
-      <a href="#" onclick="logout()" class="back">Cerrar sesi�n</a>
+      <a href="dashboard-voluntario.html" class="back" style="margin-right:10px;">🏠 Inicio</a>
+      <a href="#" onclick="logout()" class="back">Cerrar sesión</a>
     </div>
   </header>
   <main>
     <div class="form-card" id="perfilCard">
       <div id="perfilInfo"><p>Cargando perfil...</p></div>
-      <button id="btnEditarPerfil" class="btn-secondary">?? Editar datos / ubicaci�n</button>
+      <button id="btnEditarPerfil" class="btn-secondary">⚙️ Editar datos / ubicación</button>
       <button id="btnToggleActivo" class="btn-secondary" style="display:none;">Estado: Activo</button>
     </div>
 
     <div class="form-card" id="formRegistro" style="display:none;">
       <h2>Actualizar datos</h2>
-      <label>Tel�fono:</label>
+      <label>Teléfono:</label>
       <input type="text" id="telefono" required placeholder="04121234567" inputmode="numeric" maxlength="15" />
       <label>Nombre completo:</label>
       <input type="text" id="nombre" required maxlength="100" />
-      <label>Tipo de veh�culo:</label>
+      <label>Tipo de vehículo:</label>
       <select id="tipo_vehiculo" required>
         <option value="moto">Moto</option>
         <option value="carro">Carro</option>
@@ -38,17 +38,17 @@
       </select>
       <label>Capacidad de carga (opcional):</label>
       <input type="text" id="capacidad" maxlength="50" placeholder="Ej: 100 kg" />
-      <label>Ubicaci�n:</label>
+      <label>Ubicación:</label>
       <div class="search-box">
-        <input type="text" id="buscarDireccionRegistro" placeholder="Buscar direcci�n o lugar..." autocomplete="off" />
+        <input type="text" id="buscarDireccionRegistro" placeholder="Buscar dirección o lugar..." autocomplete="off" />
         <div id="sugerenciasRegistro" class="dropdown-sugerencias"></div>
-        <button type="button" id="btnBuscarRegistro" class="btn-secondary">??</button>
+        <button type="button" id="btnBuscarRegistro" class="btn-secondary">🔎</button>
       </div>
-      <button type="button" id="btnUbicacionRegistro" class="btn-secondary">?? Usar GPS</button>
+      <button type="button" id="btnUbicacionRegistro" class="btn-secondary">📍 Usar GPS</button>
       <div id="mapaRegistro" style="height:200px; margin-top:8px;"></div>
       <input type="hidden" id="latRegistro" />
       <input type="hidden" id="lonRegistro" />
-      <button id="btnGuardarPerfil" class="btn-primary">?? Guardar cambios</button>
+      <button id="btnGuardarPerfil" class="btn-primary">💾 Guardar cambios</button>
       <div id="msgRegistro" class="mensaje" style="display:none;"></div>
     </div>
 
@@ -57,7 +57,7 @@
       <div class="search-box">
         <input type="text" id="buscarDireccionMapa" placeholder="Buscar zona..." autocomplete="off" />
         <div id="sugerenciasMapa" class="dropdown-sugerencias"></div>
-        <button type="button" id="btnBuscarMapa" class="btn-secondary">??</button>
+        <button type="button" id="btnBuscarMapa" class="btn-secondary">🔎</button>
       </div>
       <div class="coord-row" style="margin-top:8px;">
         <select id="radioSelect">
@@ -66,7 +66,7 @@
           <option value="20">20 km</option>
           <option value="50">50 km</option>
         </select>
-        <button id="btnBuscarNecesidades" class="btn-primary">?? Buscar</button>
+        <button id="btnBuscarNecesidades" class="btn-primary">🔍 Buscar</button>
       </div>
       <div id="mapaNecesidades" style="height:300px; margin-top:8px;"></div>
       <div id="listaNecesidades" class="lista"></div>
@@ -89,23 +89,23 @@
         const res = await apiFetch('/api/voluntarios/mi-perfil')
         perfilVoluntario = res.data
         mostrarPerfil()
-        // Si ya tiene ubicaci�n, inicializar mapa de necesidades
+        // Si ya tiene ubicación, inicializar mapa de necesidades
         if (perfilVoluntario.lat && perfilVoluntario.lon) {
           inicializarMapaNecesidades()
           buscarNecesidades(perfilVoluntario.lat, perfilVoluntario.lon, 10)
         }
       } catch(e) {
-        document.getElementById('perfilInfo').innerHTML = '<div class="alert-aviso">?? Complete sus datos para empezar a ayudar.</div>'
+        document.getElementById('perfilInfo').innerHTML = '<div class="alert-aviso">⚠️ Complete sus datos para empezar a ayudar.</div>'
         document.getElementById('formRegistro').style.display = 'block'
       }
     }
 
     function mostrarPerfil() {
       const info = document.getElementById('perfilInfo')
-      info.innerHTML = `<p><strong>${perfilVoluntario.nombre}</strong> | ?? ${perfilVoluntario.telefono}</p>
-        <p>?? ${perfilVoluntario.tipo_vehiculo || 'No especificado'} | Estado: ${perfilVoluntario.activo ? 'Activo' : 'Inactivo'}</p>`
+      info.innerHTML = `<p><strong>${perfilVoluntario.nombre}</strong> | 📞 ${perfilVoluntario.telefono}</p>
+        <p>🚚 ${perfilVoluntario.tipo_vehiculo || 'No especificado'} | Estado: ${perfilVoluntario.activo ? 'Activo' : 'Inactivo'}</p>`
       document.getElementById('btnToggleActivo').style.display = 'inline-block'
-      document.getElementById('btnToggleActivo').textContent = perfilVoluntario.activo ? '?? Activo' : '?? Inactivo'
+      document.getElementById('btnToggleActivo').textContent = perfilVoluntario.activo ? '🟢 Activo' : '🔴 Inactivo'
     }
 
     // Editar perfil
@@ -178,13 +178,13 @@
       })
     }
 
-    // Dropdown y b�squeda para registro
+    // Dropdown y búsqueda para registro
     setupDropdown('buscarDireccionRegistro', 'sugerenciasRegistro', 'mapaRegistro', 'latRegistro', 'lonRegistro')
     document.getElementById('btnBuscarRegistro').onclick = () => searchAddress('buscarDireccionRegistro', 'mapaRegistro', 'latRegistro', 'lonRegistro')
 
     document.getElementById('btnGuardarPerfil').onclick = async function() {
       const telefono = document.getElementById('telefono').value.trim()
-      if (!/^[0-9]{7,15}$/.test(telefono)) return alert('Tel�fono inv�lido')
+      if (!/^[0-9]{7,15}$/.test(telefono)) return alert('Teléfono inválido')
       const body = {
         telefono,
         nombre: document.getElementById('nombre').value.trim(),
@@ -230,7 +230,7 @@
             <strong>${n.punto} (${n.distancia_km.toFixed(1)} km)</strong><br>
             Prioridad: ${n.prioridad} | Estado: ${n.estado}<br>
             Insumos: ${n.items.map(i => (i.detalle || i.tipo) + ': ' + i.cantidad + ' ' + i.unidad).join(', ')}<br>
-            <button class="btn-primary" style="margin-top:5px;" onclick="tomarEntrega('${n.id}')">?? Tomar esta entrega</button>
+            <button class="btn-primary" style="margin-top:5px;" onclick="tomarEntrega('${n.id}')">📦 Tomar esta entrega</button>
           </div>`).join('')
       } catch(e) {
         lista.innerHTML = 'Error al buscar.'
@@ -242,7 +242,7 @@
       try {
         const body = { idempotencyKey: generarUUID(), voluntario_telefono: perfilVoluntario.telefono, necesidad_id: necesidadId }
         const res = await apiFetch('/api/entregas', { method: 'POST', body: JSON.stringify(body) })
-        alert('? Entrega asignada. ID: ' + res.data.id)
+        alert('✅ Entrega asignada. ID: ' + res.data.id)
         buscarNecesidades(perfilVoluntario.lat || 10.48, perfilVoluntario.lon || -66.90, parseInt(document.getElementById('radioSelect').value))
       } catch(e) { alert('Error: ' + e.message) }
     }
@@ -257,7 +257,7 @@
     setupDropdown('buscarDireccionMapa', 'sugerenciasMapa', 'mapaNecesidades', null, null, true)
     document.getElementById('btnBuscarMapa').onclick = () => searchAddress('buscarDireccionMapa', 'mapaNecesidades', null, null, true)
 
-    // Funciones auxiliares para dropdown y b�squeda
+    // Funciones auxiliares para dropdown y búsqueda
     function setupDropdown(inputId, sugerenciasId, mapContainerId, latInputId, lonInputId, esMapaBusqueda = false) {
       const input = document.getElementById(inputId)
       const sugerenciasDiv = document.getElementById(sugerenciasId)
@@ -298,7 +298,7 @@
 
     async function searchAddress(inputId, mapContainerId, latInputId, lonInputId, esBusqueda = false) {
       const q = document.getElementById(inputId).value.trim()
-      if (!q) return alert('Escriba una direcci�n')
+      if (!q) return alert('Escriba una dirección')
       try {
         const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q))
         const data = await res.json()
