@@ -1,4 +1,4 @@
-﻿<!-- @build: 2026-06-27.22-00-00 | id: B22-REFUGIO-DINAMICO | desc: Dashboard Refugio con opciones de catálogo desde BD, lógica original intacta -->
+<!-- @build: 2026-06-27.22-00-00 | id: B22-REFUGIO-DINAMICO | desc: Dashboard Refugio con opciones de cat�logo desde BD, l�gica original intacta -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -64,35 +64,35 @@
   <div class="container">
     <header>
       <div>
-        <h1>📋 Punto de Ayuda</h1>
+        <h1>?? Punto de Ayuda</h1>
       </div>
       <div class="user-info">
         <p>Bienvenido,</p>
         <strong id="nombre-usuario">Cargando...</strong>
         <p id="tipo-punto"></p>
-        <button class="btn-cerrar" id="btn-cerrar">Cerrar sesión</button>
+        <button class="btn-cerrar" id="btn-cerrar">Cerrar sesi�n</button>
       </div>
     </header>
 
     <div class="card">
-      <h2>📝 Agregar items a la solicitud</h2>
+      <h2>?? Agregar items a la solicitud</h2>
       <form id="form-item">
         <div class="form-group">
           <label for="tipo-insumo">Tipo de insumo *</label>
           <select id="tipo-insumo" required>
             <option value="">Seleccione...</option>
-            <option value="agua_potable">💧 Agua potable</option>
-            <option value="alimentos_no_perecibles">🍚 Alimentos no perecederos</option>
-            <option value="medicinas">💊 Medicinas</option>
-            <option value="colchonetas">🛏️ Colchonetas</option>
-            <option value="ropa">👕 Ropa</option>
-            <option value="calzado">👟 Calzado</option>
-            <option value="otros">📦 Otros</option>
+            <option value="agua_potable">?? Agua potable</option>
+            <option value="alimentos_no_perecibles">?? Alimentos no perecederos</option>
+            <option value="medicinas">?? Medicinas</option>
+            <option value="colchonetas">??? Colchonetas</option>
+            <option value="ropa">?? Ropa</option>
+            <option value="calzado">?? Calzado</option>
+            <option value="otros">?? Otros</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label for="detalle-insumo">Detalle específico *</label>
+          <label for="detalle-insumo">Detalle espec�fico *</label>
           <select id="detalle-insumo" required>
             <option value="">Seleccione el tipo primero...</option>
           </select>
@@ -114,7 +114,7 @@
           <label for="talla-ropa">Talla *</label>
           <select id="talla-ropa">
             <option value="">Seleccione talla...</option>
-            <option value="S">S (Pequeña)</option>
+            <option value="S">S (Peque�a)</option>
             <option value="M">M (Mediana)</option>
             <option value="L">L (Grande)</option>
             <option value="XL">XL (Extra Grande)</option>
@@ -131,19 +131,19 @@
         </div>
 
         <div class="form-group" id="grupo-talla-calzado" style="display:none;">
-          <label for="talla-calzado">Número/Talla *</label>
+          <label for="talla-calzado">N�mero/Talla *</label>
           <select id="talla-calzado">
-            <option value="">Seleccione número...</option>
+            <option value="">Seleccione n�mero...</option>
           </select>
         </div>
 
-        <button type="submit" class="btn-secondary btn-agregar">➕ Agregar item al carrito</button>
+        <button type="submit" class="btn-secondary btn-agregar">? Agregar item al carrito</button>
       </form>
 
       <div class="carrito" id="carrito" style="display:none;">
         <div class="carrito-header">
-          <h3>🛒 Items en la solicitud <span id="contador-carrito" class="contador-carrito">0</span></h3>
-          <button type="button" class="btn-danger" id="btn-limpiar-carrito">🗑️ Limpiar todo</button>
+          <h3>?? Items en la solicitud <span id="contador-carrito" class="contador-carrito">0</span></h3>
+          <button type="button" class="btn-danger" id="btn-limpiar-carrito">??? Limpiar todo</button>
         </div>
         <div id="lista-carrito">
           <div class="carrito-vacio">No hay items agregados</div>
@@ -154,23 +154,23 @@
         <label for="prioridad">Prioridad de la solicitud *</label>
         <select id="prioridad" required>
           <option value="">Seleccione...</option>
-          <option value="alta">🔴 Alta (Necesito ahora)</option>
-          <option value="media">🔵 Media (Esta semana)</option>
-          <option value="baja">🟢 Baja (Puedo esperar)</option>
+          <option value="alta">?? Alta (Necesito ahora)</option>
+          <option value="media">?? Media (Esta semana)</option>
+          <option value="baja">?? Baja (Puedo esperar)</option>
         </select>
       </div>
 
       <div class="form-group">
         <label for="contacto">Contacto (opcional)</label>
-        <input type="text" id="contacto" placeholder="Teléfono o persona de contacto" maxlength="50">
+        <input type="text" id="contacto" placeholder="Tel�fono o persona de contacto" maxlength="50">
       </div>
 
-      <button type="button" class="btn-primary btn-agregar" id="btn-enviar-todo" disabled>📤 Enviar solicitud completa</button>
+      <button type="button" class="btn-primary btn-agregar" id="btn-enviar-todo" disabled>?? Enviar solicitud completa</button>
       <div id="mensaje-form" class="mensaje"></div>
     </div>
 
     <div class="card">
-      <h2>📦 Solicitudes reportadas</h2>
+      <h2>?? Solicitudes reportadas</h2>
       <div id="lista-necesidades">
         <div class="loading">Cargando historial...</div>
       </div>
@@ -184,7 +184,7 @@
     }
 
     document.getElementById('nombre-usuario').innerText = perfil.nombre_punto || perfil.nombre || perfil.email;
-    document.getElementById('tipo-punto').innerText = perfil.rol === 'centro_salud' ? '🏥 Centro de Salud' : '🏠 Refugio';
+    document.getElementById('tipo-punto').innerText = perfil.rol === 'centro_salud' ? '?? Centro de Salud' : '?? Refugio';
 
     document.getElementById('btn-cerrar').onclick = function() {
       logout();
@@ -192,7 +192,7 @@
 
     let carrito = [];
 
-    // Configuración de lógica por tipo (unidad, talla, calzado) — sin detalles hardcodeados
+    // Configuraci�n de l�gica por tipo (unidad, talla, calzado) � sin detalles hardcodeados
     const configInsumos = {
       agua_potable: { unidad: 'litros', esUnidadFija: true },
       alimentos_no_perecibles: { unidad: 'kg', esUnidadFija: true },
@@ -221,7 +221,7 @@
       unidadSelect.innerHTML = '<option value="">Seleccione...</option>';
       document.getElementById('talla-ropa').value = '';
       document.getElementById('tipo-calzado').value = '';
-      document.getElementById('talla-calzado').innerHTML = '<option value="">Seleccione número...</option>';
+      document.getElementById('talla-calzado').innerHTML = '<option value="">Seleccione n�mero...</option>';
 
       if (!tipo || !configInsumos[tipo]) {
         detalleSelect.innerHTML = '<option value="">Seleccione el tipo primero...</option>';
@@ -247,7 +247,7 @@
           });
         }
       } catch (error) {
-        console.error('Error al cargar catálogo:', error);
+        console.error('Error al cargar cat�logo:', error);
         detalleSelect.innerHTML = '<option value="">Error al cargar opciones</option>';
       }
 
@@ -267,7 +267,7 @@
       const tallaCalzadoSelect = document.getElementById('talla-calzado');
       const grupoTallaCalzado = document.getElementById('grupo-talla-calzado');
 
-      tallaCalzadoSelect.innerHTML = '<option value="">Seleccione número...</option>';
+      tallaCalzadoSelect.innerHTML = '<option value="">Seleccione n�mero...</option>';
 
       if (!tipo) {
         grupoTallaCalzado.style.display = 'none';
@@ -311,7 +311,7 @@
         const tipoCalzado = document.getElementById('tipo-calzado').value;
         const tallaCalzado = document.getElementById('talla-calzado').value;
         if (!tipoCalzado || !tallaCalzado) {
-          alert('Debe seleccionar tipo y número de calzado');
+          alert('Debe seleccionar tipo y n�mero de calzado');
           return;
         }
         unidad = `talla_${tallaCalzado}`;
@@ -361,7 +361,7 @@
             <div class="item-carrito-detalle">${item.detalle}</div>
           </div>
           <div class="item-carrito-cantidad">${item.cantidad} ${item.unidad}</div>
-          <button type="button" class="btn-danger" onclick="eliminarItem(${index})">🗑️</button>
+          <button type="button" class="btn-danger" onclick="eliminarItem(${index})">???</button>
         `;
         listaCarrito.appendChild(div);
       });
@@ -373,7 +373,7 @@
     }
 
     document.getElementById('btn-limpiar-carrito').onclick = function() {
-      if (confirm('¿Está seguro de limpiar todo el carrito?')) {
+      if (confirm('�Est� seguro de limpiar todo el carrito?')) {
         carrito = [];
         actualizarCarrito();
       }
@@ -423,7 +423,7 @@
         });
 
         if (respuesta.success) {
-          msg.innerHTML = `✅ Solicitud enviada con ${carrito.length} items`;
+          msg.innerHTML = `? Solicitud enviada con ${carrito.length} items`;
           msg.className = 'mensaje exito';
           msg.style.display = 'block';
           
@@ -440,12 +440,12 @@
           throw new Error(respuesta.error?.message || 'Error desconocido');
         }
       } catch (error) {
-        msg.innerHTML = '❌ ' + error.message;
+        msg.innerHTML = '? ' + error.message;
         msg.className = 'mensaje error';
         msg.style.display = 'block';
       } finally {
         btn.disabled = false;
-        btn.textContent = '📤 Enviar solicitud completa';
+        btn.textContent = '?? Enviar solicitud completa';
       }
     };
 
@@ -467,9 +467,9 @@
             const fechaRaw = nec.creado_en || nec.created_at || nec.fecha || nec.createdAt || new Date().toISOString();
             const fecha = new Date(fechaRaw).toLocaleString('es-ES');
             
-            const estadoTexto = nec.estado === 'pendiente' ? '⏳ Pendiente' : 
-                               nec.estado === 'asignada' ? '🚚 En camino' : 
-                               nec.estado === 'cubierta' ? '✅ Cubierta' : (nec.estado || 'Pendiente');
+            const estadoTexto = nec.estado === 'pendiente' ? '? Pendiente' : 
+                               nec.estado === 'asignada' ? '?? En camino' : 
+                               nec.estado === 'cubierta' ? '? Cubierta' : (nec.estado || 'Pendiente');
             
             const itemsTexto = nec.items ? nec.items.map(i => `${i.detalle || i.tipo} (${i.cantidad} ${i.unidad})`).join(', ') : 'Sin detalles';
             
@@ -481,15 +481,15 @@
               <div class="necesidad-detalle">${itemsTexto}</div>
               <div class="necesidad-detalle">Estado: ${estadoTexto}</div>
               ${nec.contacto ? `<div class="necesidad-detalle">Contacto: ${nec.contacto}</div>` : ''}
-              <div class="necesidad-fecha">📅 Reportado: ${fecha}</div>
+              <div class="necesidad-fecha">?? Reportado: ${fecha}</div>
             `;
             ul.appendChild(li);
           });
         } else {
-          lista.innerHTML = '<div class="empty-state">📭 Aún no has reportado necesidades</div>';
+          lista.innerHTML = '<div class="empty-state">?? A�n no has reportado necesidades</div>';
         }
       } catch (error) {
-        lista.innerHTML = '<div class="empty-state">❌ Error al cargar necesidades</div>';
+        lista.innerHTML = '<div class="empty-state">? Error al cargar necesidades</div>';
         console.error('Error al cargar necesidades:', error);
       }
     }

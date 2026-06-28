@@ -592,7 +592,7 @@
     window.verTrazabilidad = async function(donacionId) {
       try {
         const token = localStorage.getItem('authToken');
-        const res = await fetch('http://localhost:3000/api/donaciones/' + donacionId + '/trazabilidad', {
+        const res = await fetch('https://sos-venezuela-backend.onrender.com/api/donaciones/' + donacionId + '/trazabilidad', {
           headers: { Authorization: 'Bearer ' + token }
         });
         if (!res.ok) throw new Error('Error al obtener trazabilidad');

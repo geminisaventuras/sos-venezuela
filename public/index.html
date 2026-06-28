@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -12,7 +12,7 @@
     if (!authToken || !perfil) {
       window.location.href = '/login.html';
     } else {
-      // Redirigir según rol
+      // Redirigir seg�n rol
       const r = perfil.rol;
       if (r === 'refugio' || r === 'centro_salud') window.location.href = '/necesidad.html';
       else if (r === 'centro_acopio') window.location.href = '/donacion.html';
