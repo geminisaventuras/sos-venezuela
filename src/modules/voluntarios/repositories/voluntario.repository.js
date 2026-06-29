@@ -1,4 +1,4 @@
-﻿// @build: 2026-06-29.14-15-00 | id: B2-VOL-REPO-REFACTOR | desc: Uso de utilidad geo compartida
+﻿// @build: 2026-06-29.14-15-00 | id: B2-VOL-REPO-REFACTOR | desc: Uso de utilidad geo compartida + datos del donante en donaciones pendientes
 const supabase = require('../../../config/supabase');
 const geo = require('../../../utils/geo');
 
@@ -48,7 +48,7 @@ class VoluntarioRepository {
   async findDonacionesPendientes() {
     const { data, error } = await supabase
       .from('donaciones')
-      .select('*, detalle_donacion(*, catalogo_items(nombre_generico))')
+      .select('*, detalle_donacion(*, catalogo_items(nombre_generico)), perfiles!donaciones_donante_id_fkey(nombre_punto, telefono)')
       .eq('modo_entrega', 'recogida')
       .eq('estado', 'ofrecida')
       .order('creado_en', { ascending: false });

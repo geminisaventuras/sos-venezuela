@@ -25,6 +25,10 @@ window.apiFetch = async function(path, options = {}) {
   options.signal = controller.signal
   options.headers = { 'Content-Type': 'application/json', ...options.headers }
   if (authToken) options.headers['Authorization'] = 'Bearer ' + authToken
+  // W3C Trace Context
+  const traceId = crypto.randomUUID().replace(/-/g, '')
+  const spanId = traceId.substring(0, 16)
+  options.headers['traceparent'] = `00-${traceId}-${spanId}-01`
   try {
     const res = await fetch(API_BASE + path, options)
     clearTimeout(timeout)
@@ -39,7 +43,6 @@ window.apiFetch = async function(path, options = {}) {
     throw err
   }
 }
-
 window.generarUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16) })
 window.obtenerUbicacion = cb => navigator.geolocation ? navigator.geolocation.getCurrentPosition(pos => cb(null, { lat: pos.coords.latitude, lon: pos.coords.longitude }), cb, { enableHighAccuracy: true, timeout: 10000 }) : cb(new Error('No soportado'))
 window.obtenerDireccion = (lat, lon, cb) => fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`).then(r => r.json()).then(d => cb(d?.display_name || null)).catch(() => cb(null))

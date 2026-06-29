@@ -61,7 +61,6 @@ class DonacionService {
     return this.donacionRepository.confirmarRecogida(donacionId);
   }
 
-  // NUEVO: Modificar donación (solo en estado 'ofrecida')
   async modificarDonacion(donacionId, userId, datos) {
     const donacion = await this.donacionRepository.findById(donacionId);
     if (!donacion) throw new Error('Donación no encontrada');
@@ -71,7 +70,6 @@ class DonacionService {
     return this.donacionRepository.modificarDonacion(donacionId, userId, datos);
   }
 
-  // NUEVO: Cancelar donación (solo en estado 'ofrecida')
   async cancelarDonacion(donacionId, userId) {
     const donacion = await this.donacionRepository.findById(donacionId);
     if (!donacion) throw new Error('Donación no encontrada');
@@ -79,6 +77,10 @@ class DonacionService {
     if (donacion.donante_id !== userId) throw new Error('No autorizado');
     
     return this.donacionRepository.cancelarDonacion(donacionId, userId);
+  }
+
+  async obtenerHistorial(userId) {
+    return this.donacionRepository.findByDonante(userId);
   }
 }
 

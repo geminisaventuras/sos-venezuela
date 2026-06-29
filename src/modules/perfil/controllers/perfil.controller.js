@@ -33,6 +33,18 @@ class PerfilController {
       next(error);
     }
   }
+
+  async listarAcopiosCercanos(req, res, next) {
+    try {
+      const lat = parseFloat(req.query.lat) || null;
+      const lon = parseFloat(req.query.lon) || null;
+      const radio = parseInt(req.query.radio) || 50;
+      const acopios = await this.service.obtenerAcopiosCercanos(lat, lon, radio);
+      res.json({ success: true, data: acopios, traceId: req.traceId });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = PerfilController;

@@ -139,6 +139,16 @@ class DonacionController {
       next(error);
     }
   }
+
+  async listarHistorial(req, res, next) {
+    try {
+      const userId = req.user.sub;
+      const donaciones = await this.service.obtenerHistorial(userId);
+      res.json({ success: true, data: donaciones, traceId: req.traceId });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = DonacionController;

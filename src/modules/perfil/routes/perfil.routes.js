@@ -11,5 +11,6 @@ const controller = new PerfilController(service);
 
 router.get('/', authMiddleware, (req, res, next) => controller.obtener(req, res, next));
 router.post('/', authMiddleware, (req, res, next) => controller.guardar(req, res, next));
+router.get('/acopios-cercanos', authMiddleware, (req, res, next) => controller.listarAcopiosCercanos(req, res, next));
 
 module.exports = router;

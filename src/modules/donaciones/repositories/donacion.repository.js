@@ -287,6 +287,16 @@ class DonacionRepository {
       despachos: despachos
     };
   }
+
+  async findByDonante(userId) {
+    const { data, error } = await supabase
+      .from('donaciones')
+      .select('*, detalle_donacion(*, catalogo_items(nombre_generico)), acopio_destino:perfiles!donaciones_acopio_destino_id_fkey(nombre_punto)')
+      .eq('donante_id', userId)
+      .order('creado_en', { ascending: false });
+    if (error) throw new Error(`Error al obtener historial: ${error.message}`);
+    return data;
+  }
 }
 
 module.exports = DonacionRepository;

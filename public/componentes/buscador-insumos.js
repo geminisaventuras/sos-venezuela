@@ -87,12 +87,12 @@ window.BuscadorInsumos = {
   _bindEventos() {
     const input = document.getElementById('busqueda-insumo');
     const btnLimpiar = document.getElementById('btn-limpiar-busqueda');
-    
+
     input.addEventListener('input', () => {
       btnLimpiar.style.display = input.value.length > 0 ? 'block' : 'none';
       this._realizarBusqueda(input.value);
     });
-    
+
     btnLimpiar.addEventListener('click', () => {
       input.value = '';
       btnLimpiar.style.display = 'none';
@@ -212,7 +212,7 @@ window.BuscadorInsumos = {
     let html = `<div class="form-group"><label>${label} <span style="color:var(--danger);">*</span></label><select id="${id}">`;
     html += opciones.map(o => `<option value="${o}">${o}</option>`).join('');
     html += '<option value="otro">Otro</option></select></div>';
-    
+
     if (tipoNumerico) {
       // Campo numérico con sufijo de unidad fija
       html += `<div class="form-group" id="grupo-${id}-otro" style="display:none;"><label>Especifica otro valor</label><div style="display:flex; align-items:center; gap:8px;"><input type="number" id="${id}-otro" min="1" placeholder="Ej: 1000" style="flex:1;"><span style="font-weight:bold;">${unidad}</span></div></div>`;
@@ -281,20 +281,20 @@ window.BuscadorInsumos = {
 
   _agregarSelectorFormato(div, modulo) {
     const formatos = {
-      medico: ['blister','caja','frasco','ampolla','unidad_suelta'],
-      alimentos: ['paquete','bulto','bolsa','caja','unidad_suelta'],
-      agua: ['botella','botellon','garrafon','pack','unidad_suelta'],
-      higiene: ['paquete','caja','bolsa','unidad_suelta'],
-      ropa_calzado: ['paquete','caja','unidad_suelta']
+      medico: ['blister', 'caja', 'frasco', 'ampolla', 'unidad_suelta'],
+      alimentos: ['paquete', 'bulto', 'bolsa', 'caja', 'unidad_suelta'],
+      agua: ['botella', 'botellon', 'garrafon', 'pack', 'unidad_suelta'],
+      higiene: ['paquete', 'caja', 'bolsa', 'unidad_suelta'],
+      ropa_calzado: ['paquete', 'caja', 'unidad_suelta']
     };
     const opciones = (formatos[modulo] || ['unidad_suelta']).map(f => `<option value="${f}">${this._formatearFormato(f)}</option>`).join('');
-    
+
     let html = `<div class="form-group"><label>¿Cómo viene el producto? <span style="color:var(--danger);">*</span></label><select id="formato">${opciones}<option value="otro">Otro</option></select></div>`;
-    
+
     // Campo "Otro" para formato con placeholder contextual
     const placeholderFormato = this._placeholdersOtro.formato?.[modulo] || 'Especifica otro formato';
     html += `<div class="form-group" id="grupo-formato-otro" style="display:none;"><label>Especifica otro formato</label><input type="text" id="formato-otro" placeholder="${placeholderFormato}" maxlength="50"></div>`;
-    
+
     div.innerHTML += html;
   },
 
@@ -309,9 +309,9 @@ window.BuscadorInsumos = {
   },
 
   _vincularEventosDinamicos(modulo, item) {
-    const idsSelectores = ['dosis','volumen','peso','formato','tipo-ropa','genero-ropa','talla-ropa',
-     'tipo-calzado','genero-calzado','talla-calzado','tipo-higiene','tipo-logistica'];
-    
+    const idsSelectores = ['dosis', 'volumen', 'peso', 'formato', 'tipo-ropa', 'genero-ropa', 'talla-ropa',
+      'tipo-calzado', 'genero-calzado', 'talla-calzado', 'tipo-higiene', 'tipo-logistica'];
+
     idsSelectores.forEach(id => {
       const el = document.getElementById(id);
       if (el) {
@@ -323,7 +323,7 @@ window.BuscadorInsumos = {
         if (el.value === 'otro') this._toggleCampoOtro(id);
       }
     });
-    
+
     const desglose = document.getElementById('desglose-container');
     if (desglose) {
       desglose.addEventListener('input', () => this._actualizarResumen());
@@ -339,7 +339,7 @@ window.BuscadorInsumos = {
   },
 
   _obtenerValorAtributo() {
-    const ids = ['dosis','volumen','peso'];
+    const ids = ['dosis', 'volumen', 'peso'];
     for (const id of ids) {
       const sel = document.getElementById(id);
       if (sel) {

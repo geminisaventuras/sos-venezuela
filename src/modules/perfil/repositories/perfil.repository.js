@@ -43,14 +43,18 @@ class PerfilRepository {
   }
 
   async buscarAcopiosCercanos(lat, lon, radioKm = 50) {
-    const { data, error } = await supabaseAdmin.from('perfiles').select('*').eq('rol', 'centro_acopio').eq('activo', true).not('lat', 'is', null).not('lon', 'is', null);
-    if (error) throw new Error(`Error al buscar acopios: ${error.message}`);
-    if (data && lat && lon) {
-      return data.filter(acopio => { const distancia = geo.calcularDistancia(lat, lon, acopio.lat, acopio.lon); return distancia <= radioKm; })
-        .map(acopio => ({ ...acopio, distancia: geo.calcularDistancia(lat, lon, acopio.lat, acopio.lon) })).sort((a, b) => a.distancia - b.distancia);
-    }
-    return data;
-  }
+  const { data, error } = await supabaseAdmin.rpc('buscar_acopios_cercanos', {
+    lat_consulta: lat,
+    lon_consulta: lon,
+    radio_km: radioKm
+  });
+  if (error) throw new Error(`Error al buscar acopios cercanos: ${error.message}`);
+  // La función SQL devuelve 'distancia_km' pero el frontend espera 'distancia'
+  return (data || []).map(item => ({
+    ...item,
+    distancia: item.distancia_km
+  }));
+}
 
   async actualizarEstado(userId, activo) {
     const { data, error } = await supabaseAdmin.from('perfiles').update({ activo }).eq('user_id', userId).select().single();
@@ -58,20 +62,11 @@ class PerfilRepository {
     return data;
   }
 
-    async contarPorRol() {
-    const { data, error } = await supabaseAdmin
-      .from('perfiles')
-      .select('rol')
-      .eq('activo', true);
-
+  async contarPorRol() {
+    const { data, error } = await supabaseAdmin.from('perfiles').select('rol').eq('activo', true);
     if (error) throw new Error(`Error al contar usuarios: ${error.message}`);
-
     const conteo = {};
-    if (data) {
-      data.forEach(row => {
-        conteo[row.rol] = (conteo[row.rol] || 0) + 1;
-      });
-    }
+    if (data) data.forEach(row => { conteo[row.rol] = (conteo[row.rol] || 0) + 1; });
     return conteo;
   }
 }
