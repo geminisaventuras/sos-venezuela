@@ -1,18 +1,21 @@
-﻿// @build: 2026-06-29.18-00-00 | id: B3-DON-REPO-MODO-FIX | desc: Repositorio de donaciones que guarda modo_entrega, dirección y coordenadas de recogida
+﻿// @build: 2026-06-29.14-20-00 | id: B3-DON-REPO-REFACTOR | desc: Uso de utilidad catalogo-helper compartida
 const supabase = require('../../../config/supabase');
+const catalogoHelper = require('../../../utils/catalogo-helper');
 
 class DonacionRepository {
+  constructor() {
+    this.supabase = supabase;
+  }
+
   async crearConTransaccion({ idempotencyKey, centro_acopio, items, donante, modo_entrega, direccion_recogida, lat_recogida, lon_recogida }) {
-    // 1. Verificar idempotencia
-    const { data: existente } = await supabase
+    const { data: existente } = await this.supabase
       .from('donaciones')
       .select('id')
       .eq('idempotency_key', idempotencyKey)
       .maybeSingle();
     if (existente) return { idempotente: true, id: existente.id };
 
-    // 2. Buscar o usar el acopio
-    const { data: acopioData } = await supabase
+    const { data: acopioData } = await this.supabase
       .from('perfiles')
       .select('user_id')
       .eq('nombre_punto', centro_acopio.nombre)
@@ -21,7 +24,7 @@ class DonacionRepository {
 
     let acopioId = acopioData?.user_id;
     if (!acopioId) {
-      const { data: primerAcopio } = await supabase
+      const { data: primerAcopio } = await this.supabase
         .from('perfiles')
         .select('user_id')
         .eq('rol', 'centro_acopio')
@@ -33,10 +36,9 @@ class DonacionRepository {
 
     if (!acopioId) throw new Error('No se encontró un centro de acopio activo');
 
-    // 3. Buscar donante (opcional)
     let donanteId = null;
     if (donante) {
-      const { data: donanteData } = await supabase
+      const { data: donanteData } = await this.supabase
         .from('perfiles')
         .select('user_id')
         .eq('nombre_punto', donante)
@@ -45,8 +47,7 @@ class DonacionRepository {
       donanteId = donanteData?.user_id || null;
     }
 
-    // 4. Insertar la donación (ahora con modo_entrega y dirección)
-    const { data: nuevaDonacion, error: errorDonacion } = await supabase
+    const { data: nuevaDonacion, error: errorDonacion } = await this.supabase
       .from('donaciones')
       .insert({
         idempotency_key: idempotencyKey,
@@ -64,15 +65,13 @@ class DonacionRepository {
 
     if (errorDonacion) throw new Error(`Error al crear donación: ${errorDonacion.message}`);
 
-    // 5. Insertar cada detalle
     for (const item of items) {
       let insumoId = item.insumo_id;
-      
       if (!insumoId || insumoId === 'nuevo' || insumoId === '00000000-0000-0000-0000-000000000000') {
-        insumoId = await this._upsertCatalogo(item.detalle, item.unidad, item.tipo);
+        insumoId = await catalogoHelper.upsertCatalogo(item.detalle, item.unidad, item.tipo);
       }
 
-      const { error: errorDetalle } = await supabase
+      const { error: errorDetalle } = await this.supabase
         .from('detalle_donacion')
         .insert({
           donacion_id: nuevaDonacion.id,
@@ -87,54 +86,10 @@ class DonacionRepository {
     return { idempotente: false, id: nuevaDonacion.id };
   }
 
-  async _upsertCatalogo(detalle, unidad, tipo) {
-    const nombreMostrar = detalle.trim();
-    const nombreNormalizado = nombreMostrar
-      .toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, ' ').trim();
-
-    const { data: existente } = await supabase
-      .from('catalogo_insumos')
-      .select('id')
-      .eq('nombre_normalizado', nombreNormalizado)
-      .maybeSingle();
-
-    if (existente) return existente.id;
-
-    const { data: nuevo, error: errorInsert } = await supabase
-      .from('catalogo_insumos')
-      .insert({
-        nombre_mostrar: nombreMostrar,
-        nombre_normalizado: nombreNormalizado,
-        categoria: this._mapearCategoria(tipo),
-        tipo_general: tipo,
-        unidad_sugerida: unidad
-      })
-      .select('id')
-      .single();
-
-    if (errorInsert) throw new Error(`No se pudo crear el insumo en catálogo: ${errorInsert.message}`);
-    return nuevo.id;
-  }
-
-  _mapearCategoria(tipo) {
-    const mapa = {
-      'agua_potable': 'agua',
-      'alimentos_no_perecibles': 'alimentos',
-      'medicinas': 'medicinas',
-      'colchonetas': 'colchonetas',
-      'ropa': 'ropa',
-      'calzado': 'calzado',
-      'otros': 'otros'
-    };
-    return mapa[tipo] || 'otros';
-  }
-
   async findByAcopio(acopioId) {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('donaciones')
-      .select('*, detalle_donacion(*, catalogo_insumos(nombre_mostrar))')
+      .select('*, detalle_donacion(*, catalogo_items(nombre_generico))')
       .eq('acopio_destino_id', acopioId)
       .order('creado_en', { ascending: false });
     if (error) throw new Error(`Error al listar donaciones: ${error.message}`);
@@ -142,7 +97,7 @@ class DonacionRepository {
   }
 
   async findById(donacionId) {
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('donaciones')
       .select('*, detalle_donacion(*)')
       .eq('id', donacionId)
@@ -155,30 +110,74 @@ class DonacionRepository {
     const donacion = await this.findById(donacionId);
     if (!donacion) throw new Error('Donación no encontrada');
     if (donacion.estado === 'recibida') throw new Error('Esta donación ya fue confirmada');
-
-    const { error } = await supabase
-      .from('donaciones')
-      .update({
-        estado: 'recibida',
-        fecha_recibida: new Date().toISOString(),
-        cantidad_rechazada,
-        motivo_rechazo: motivo_rechazo || null
-      })
-      .eq('id', donacionId);
+    const { error } = await this.supabase.from('donaciones').update({
+      estado: 'recibida', fecha_recibida: new Date().toISOString(), cantidad_rechazada, motivo_rechazo: motivo_rechazo || null
+    }).eq('id', donacionId);
     if (error) throw new Error(`Error al confirmar donación: ${error.message}`);
     return { id: donacionId, estado: 'recibida' };
   }
 
-  async obtenerTrazabilidad(donacionId) {
-    const { data: donacion, error: errorDonacion } = await supabase
+  async confirmarRecogida(donacionId) {
+    const donacion = await this.findById(donacionId);
+    if (!donacion) throw new Error('Donación no encontrada');
+    if (donacion.estado !== 'asignada') throw new Error('Estado inválido para confirmar recogida');
+    const { error } = await this.supabase.from('donaciones').update({ estado: 'en_transito_a_acopio' }).eq('id', donacionId);
+    if (error) throw new Error(`Error al confirmar recogida: ${error.message}`);
+    return { id: donacionId, estado: 'en_transito_a_acopio' };
+  }
+
+  async modificarDonacion(donacionId, userId, { detalle, cantidad, unidad }) {
+    const donacion = await this.findById(donacionId);
+    if (!donacion) throw new Error('Donación no encontrada');
+    if (donacion.estado !== 'ofrecida') throw new Error('Solo se pueden modificar donaciones en estado ofrecida');
+    if (donacion.donante_id !== userId) throw new Error('No autorizado');
+
+    let insumoId = null;
+    if (detalle) {
+      insumoId = await catalogoHelper.upsertCatalogo(detalle, unidad || 'unidades', 'otros');
+    }
+
+    if (donacion.detalle_donacion && donacion.detalle_donacion.length > 0) {
+      const detalleId = donacion.detalle_donacion[0].id;
+      const updateData = {};
+      if (insumoId) updateData.insumo_id = insumoId;
+      if (cantidad) updateData.cantidad = cantidad;
+      if (unidad) updateData.unidad = unidad;
+      
+      const { error } = await this.supabase
+        .from('detalle_donacion')
+        .update(updateData)
+        .eq('id', detalleId);
+      if (error) throw new Error(`Error al modificar detalle: ${error.message}`);
+    }
+
+    return { id: donacionId, estado: donacion.estado };
+  }
+
+  async cancelarDonacion(donacionId, userId) {
+    const donacion = await this.findById(donacionId);
+    if (!donacion) throw new Error('Donación no encontrada');
+    if (donacion.estado !== 'ofrecida') throw new Error('Solo se pueden cancelar donaciones en estado ofrecida');
+    if (donacion.donante_id !== userId) throw new Error('No autorizado');
+
+    const { error } = await this.supabase
       .from('donaciones')
-      .select('*, detalle_donacion(*, catalogo_insumos(nombre_mostrar)), perfiles!donaciones_donante_id_fkey(nombre_punto)')
+      .update({ estado: 'cancelada' })
+      .eq('id', donacionId);
+    if (error) throw new Error(`Error al cancelar donación: ${error.message}`);
+    return { id: donacionId, estado: 'cancelada' };
+  }
+
+  async obtenerTrazabilidad(donacionId) {
+    const { data: donacion, error: errorDonacion } = await this.supabase
+      .from('donaciones')
+      .select('*, detalle_donacion(*, catalogo_items(nombre_generico)), perfiles!donaciones_donante_id_fkey(nombre_punto)')
       .eq('id', donacionId)
       .single();
     
     if (errorDonacion) throw new Error(`Error al obtener donación: ${errorDonacion.message}`);
     
-    const { data: inventarios, error: errorInventario } = await supabase
+    const { data: inventarios, error: errorInventario } = await this.supabase
       .from('inventario_acopio')
       .select('*')
       .eq('lote_id', donacionId);
@@ -188,7 +187,7 @@ class DonacionRepository {
     const despachos = [];
     if (inventarios && inventarios.length > 0) {
       for (const inv of inventarios) {
-        const { data: despachosDelItem } = await supabase
+        const { data: despachosDelItem } = await this.supabase
           .from('despachos')
           .select('*, necesidades(punto, tipo_punto), perfiles!despachos_voluntario_id_fkey(nombre_punto)')
           .eq('lote_id_origen', inv.lote_id || donacionId)
@@ -221,25 +220,39 @@ class DonacionRepository {
       }
     ];
     
-    if (donacion.estado === 'en_transito_a_acopio' || donacion.estado === 'recibida') {
+    if (donacion.estado === 'asignada' || donacion.estado === 'en_transito_a_acopio' || donacion.estado === 'recibida' || donacion.estado === 'distribuida') {
+      timeline.push({
+        estado: 'asignada',
+        fecha: donacion.creado_en,
+        descripcion: 'Transportista asignado para recolección',
+        icono: 'fa-user-check'
+      });
+    }
+    
+    if (donacion.estado === 'en_transito_a_acopio' || donacion.estado === 'recibida' || donacion.estado === 'distribuida') {
       timeline.push({
         estado: 'en_transito_a_acopio',
         fecha: donacion.fecha_recibida || donacion.creado_en,
-        descripcion: donacion.voluntario_recoleccion_id 
-          ? `En transporte al acopio por voluntario` 
-          : 'Entregado en acopio',
+        descripcion: 'Recogida confirmada, en camino al acopio',
         icono: 'fa-truck-fast'
       });
     }
     
-    if (donacion.estado === 'recibida') {
+    if (donacion.estado === 'recibida' || donacion.estado === 'distribuida') {
       timeline.push({
         estado: 'recibida',
         fecha: donacion.fecha_recibida,
-        descripcion: donacion.cantidad_rechazada 
-          ? `Recibida con ${donacion.cantidad_rechazada} unidades rechazadas` 
-          : 'Recibida y verificada en el acopio',
+        descripcion: donacion.cantidad_rechazada ? `Recibida con ${donacion.cantidad_rechazada} unidades rechazadas` : 'Recibida y verificada en el acopio',
         icono: 'fa-check-circle'
+      });
+    }
+    
+    if (donacion.estado === 'cancelada') {
+      timeline.push({
+        estado: 'cancelada',
+        fecha: donacion.creado_en,
+        descripcion: 'Donación cancelada por el donante',
+        icono: 'fa-ban'
       });
     }
     
@@ -265,7 +278,7 @@ class DonacionRepository {
       donacion_id: donacion.id,
       donante: donacion.perfiles?.nombre_punto || 'Donante anónimo',
       insumos: donacion.detalle_donacion?.map(d => ({
-        nombre: d.catalogo_insumos?.nombre_mostrar || 'Insumo',
+        nombre: d.catalogo_items?.nombre_generico || d.detalle || 'Insumo',
         cantidad: d.cantidad,
         unidad: d.unidad
       })) || [],
@@ -274,22 +287,6 @@ class DonacionRepository {
       despachos: despachos
     };
   }
-
-// @build: 2026-06-30.09-00-00 | id: B3-DON-REPO-RECOGER | desc: Repositorio con confirmación de recogida
-async confirmarRecogida(donacionId) {
-  const donacion = await this.findById(donacionId);
-  if (!donacion) throw new Error('Donación no encontrada');
-  if (donacion.estado !== 'asignada') throw new Error('Estado inválido para confirmar recogida');
-  
-  const { error } = await this.supabase
-    .from('donaciones')
-    .update({ estado: 'en_transito_a_acopio' })
-    .eq('id', donacionId);
-  if (error) throw new Error(`Error al confirmar recogida: ${error.message}`);
-  return { id: donacionId, estado: 'en_transito_a_acopio' };
-}
-
-
 }
 
 module.exports = DonacionRepository;

@@ -1,40 +1,18 @@
-// @build: 2026-06-28.06-00-00 | id: B10-INV-REPO-UPSERT | desc: Repositorio con upsert en catálogo y lote automático
+// @build: 2026-06-29.14-25-00 | id: B10-INV-REPO-REFACTOR | desc: Uso de utilidad catalogo-helper compartida
 const supabaseAdmin = require('../../../config/supabase');
 const crypto = require('crypto');
+const catalogoHelper = require('../../../utils/catalogo-helper');
 
 class InventarioRepository {
   async _buscarInsumoPorId(insumoId) {
     if (!insumoId || insumoId === 'nuevo' || insumoId === '00000000-0000-0000-0000-000000000000') return null;
-    const { data } = await supabaseAdmin.from('catalogo_insumos').select('*').eq('id', insumoId).maybeSingle();
+    const { data } = await supabaseAdmin.from('catalogo_items').select('*').eq('id', insumoId).maybeSingle();
     return data;
-  }
-
-  async _upsertCatalogo(detalle, unidad, tipo) {
-    const nombreMostrar = detalle.trim();
-    const nombreNormalizado = nombreMostrar.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
-    const { data: existente } = await supabaseAdmin.from('catalogo_insumos').select('id').eq('nombre_normalizado', nombreNormalizado).maybeSingle();
-    if (existente) return existente.id;
-    const categoria = this._mapearCategoria(tipo);
-    const { data: nuevo, error: errorInsert } = await supabaseAdmin.from('catalogo_insumos').insert({
-      nombre_mostrar: nombreMostrar,
-      nombre_normalizado: nombreNormalizado,
-      categoria: categoria,
-      tipo_general: tipo,
-      unidad_sugerida: unidad,
-      requiere_vencimiento: false
-    }).select('id').single();
-    if (errorInsert) throw new Error(`No se pudo crear el insumo en el catálogo: ${errorInsert.message}`);
-    return nuevo.id;
-  }
-
-  _mapearCategoria(tipo) {
-    const mapa = { 'agua_potable': 'agua', 'alimentos_no_perecibles': 'alimentos', 'medicinas': 'medicinas', 'colchonetas': 'colchonetas', 'ropa': 'ropa', 'calzado': 'calzado', 'material_medico': 'material_medico', 'equipos': 'equipos', 'higiene': 'higiene', 'otros': 'otros' };
-    return mapa[tipo] || 'otros';
   }
 
   async sumarStock({ acopio_id, insumo_id, tipo, detalle, unidad, cantidad, fecha_vencimiento, lote_id }) {
     const insumoExistente = await this._buscarInsumoPorId(insumo_id);
-    let insumoIdReal = insumoExistente ? insumo_id : await this._upsertCatalogo(detalle, unidad, tipo);
+    let insumoIdReal = insumoExistente ? insumo_id : await catalogoHelper.upsertCatalogo(detalle, unidad, tipo);
     const lote = lote_id || crypto.randomUUID();
 
     const { data: existente, error: errorBusqueda } = await supabaseAdmin
@@ -92,7 +70,7 @@ class InventarioRepository {
   async obtenerInventario(acopioId) {
     const { data, error } = await supabaseAdmin
       .from('inventario_acopio')
-      .select('*, catalogo_insumos(nombre_mostrar)')
+      .select('*, catalogo_items(nombre_generico)')
       .eq('acopio_id', acopioId)
       .order('fecha_vencimiento', { ascending: true, nullsFirst: false });
     if (error) throw new Error(`Error al consultar inventario: ${error.message}`);
@@ -102,7 +80,7 @@ class InventarioRepository {
   async obtenerInventarioNacional() {
     const { data, error } = await supabaseAdmin
       .from('inventario_acopio')
-      .select('*, catalogo_insumos(nombre_mostrar), perfiles!inner(nombre_punto)');
+      .select('*, catalogo_items(nombre_generico), perfiles!inner(nombre_punto)');
     if (error) throw new Error(`Error al consultar inventario nacional: ${error.message}`);
     return data;
   }

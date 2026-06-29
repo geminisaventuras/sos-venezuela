@@ -1,7 +1,8 @@
+// @build: 2026-06-28.20-15-00 | id: B30-PERFIL-SCHEMA-R3 | backup: perfil.schema.js.backup-20260628-201500 | desc: Eliminado campo 'rol' del esquema para prevenir escalación (R3)
 const { z } = require('zod');
 
 const perfilEsquema = z.object({
-  rol: z.enum(['super_admin', 'donante', 'refugio', 'centro_salud', 'centro_acopio', 'voluntario']),
+  // 'rol' se eliminó del esquema. Lo asigna el servidor basado en el token verificado.
   nombre: z.string().min(1).max(100).optional(),
   nombre_punto: z.string().min(1).max(100).optional(),
   tipo_punto: z.string().optional().nullable(),

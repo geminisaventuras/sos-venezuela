@@ -1,5 +1,6 @@
-// @build: 2026-06-28.03-30-00 | id: B30-PERFIL-REPO-FIX | desc: Eliminada restricción de unicidad de teléfono en registro
+// @build: 2026-06-29.14-10-00 | id: B30-PERFIL-REPO-REFACTOR | desc: Uso de utilidad geo compartida
 const supabaseAdmin = require('../../../config/supabase');
+const geo = require('../../../utils/geo');
 
 class PerfilRepository {
   async buscarPorUserId(userId) {
@@ -45,19 +46,11 @@ class PerfilRepository {
     const { data, error } = await supabaseAdmin.from('perfiles').select('*').eq('rol', 'centro_acopio').eq('activo', true).not('lat', 'is', null).not('lon', 'is', null);
     if (error) throw new Error(`Error al buscar acopios: ${error.message}`);
     if (data && lat && lon) {
-      return data.filter(acopio => { const distancia = this._calcularDistancia(lat, lon, acopio.lat, acopio.lon); return distancia <= radioKm; })
-        .map(acopio => ({ ...acopio, distancia: this._calcularDistancia(lat, lon, acopio.lat, acopio.lon) })).sort((a, b) => a.distancia - b.distancia);
+      return data.filter(acopio => { const distancia = geo.calcularDistancia(lat, lon, acopio.lat, acopio.lon); return distancia <= radioKm; })
+        .map(acopio => ({ ...acopio, distancia: geo.calcularDistancia(lat, lon, acopio.lat, acopio.lon) })).sort((a, b) => a.distancia - b.distancia);
     }
     return data;
   }
-
-  _calcularDistancia(lat1, lon1, lat2, lon2) {
-    const R = 6371; const dLat = this._toRad(lat2 - lat1); const dLon = this._toRad(lon2 - lon1);
-    const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(this._toRad(lat1))*Math.cos(this._toRad(lat2))*Math.sin(dLon/2)*Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); return R * c;
-  }
-
-  _toRad(degrees) { return degrees * (Math.PI / 180); }
 
   async actualizarEstado(userId, activo) {
     const { data, error } = await supabaseAdmin.from('perfiles').update({ activo }).eq('user_id', userId).select().single();
@@ -65,11 +58,20 @@ class PerfilRepository {
     return data;
   }
 
-  async contarPorRol() {
-    const { data, error } = await supabaseAdmin.from('perfiles').select('rol, count').eq('activo', true);
+    async contarPorRol() {
+    const { data, error } = await supabaseAdmin
+      .from('perfiles')
+      .select('rol')
+      .eq('activo', true);
+
     if (error) throw new Error(`Error al contar usuarios: ${error.message}`);
+
     const conteo = {};
-    if (data) data.forEach(row => { conteo[row.rol] = (conteo[row.rol] || 0) + 1; });
+    if (data) {
+      data.forEach(row => {
+        conteo[row.rol] = (conteo[row.rol] || 0) + 1;
+      });
+    }
     return conteo;
   }
 }

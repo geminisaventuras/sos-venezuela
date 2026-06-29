@@ -1,17 +1,19 @@
-﻿// @build: 2026-06-26.23-00-00 | id: B6-CAT | desc: Lógica de negocio catálogo
+﻿// @build: 2026-06-30.01-35-00 | id: B6-CAT-SERVICE-V4 | desc: Servicio que retorna sugerencias, persiste "Otro" y lista categorías
 class CatalogoService {
   constructor(repository) {
     this.repository = repository;
   }
 
-  async obtenerPorTipo(tipo) {
-    return this.repository.buscarPorTipo(tipo);
+  async buscar(filtros) {
+    return this.repository.buscarItems(filtros);
   }
 
-  async registrarSiNoExiste(tipo, detalle, userId) {
-    if (detalle && detalle.trim()) {
-      await this.repository.upsert(tipo, detalle.trim(), userId);
-    }
+  async crearItem(datos, userId) {
+    return this.repository.crearItem(datos, userId);
+  }
+
+  async listarCategorias() {
+    return this.repository.listarCategorias();
   }
 }
 

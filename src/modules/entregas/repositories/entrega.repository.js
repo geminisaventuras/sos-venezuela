@@ -1,56 +1,21 @@
-﻿// @build: 2026-06-30.08-00-00 | id: B4-ENT-REPO-PERFILES | desc: Repositorio de entregas que devuelve perfiles del donante con el formato esperado por el frontend
+﻿// @build: 2026-06-28.21-05-00 | id: B4-ENT-REPO-ATOMICO-R1 | backup: entrega.repository.js.backup-20260628-210500 | desc: Delegada creación de entrega a RPC atómica crear_entrega_atomica
 const supabase = require('../../../config/supabase');
 
 class EntregaRepository {
   async crearConTransaccion({ idempotencyKey, voluntario_telefono, necesidad_id, donacion_id }) {
-    const { data: existente } = await supabase
-      .from('entregas')
-      .select('id')
-      .eq('idempotency_key', idempotencyKey)
-      .maybeSingle();
-    if (existente) return { idempotente: true, id: existente.id };
+    // Delegar completamente a la función RPC atómica
+    const { data, error } = await supabase.rpc('crear_entrega_atomica', {
+      _idempotency_key: idempotencyKey,
+      _voluntario_telefono: voluntario_telefono,
+      _necesidad_id: necesidad_id || null,
+      _donacion_id: donacion_id || null
+    });
 
-    const { data: voluntario } = await supabase
-      .from('voluntarios')
-      .select('user_id')
-      .eq('telefono', voluntario_telefono)
-      .single();
-    if (!voluntario) throw new Error('Voluntario no encontrado');
-
-    const { data: nuevaEntrega, error } = await supabase
-      .from('entregas')
-      .insert({
-        idempotency_key: idempotencyKey,
-        voluntario_telefono,
-        necesidad_id: necesidad_id || null,
-        donacion_id: donacion_id || null,
-        estado: 'en_camino',
-        fecha_creacion: new Date().toISOString()
-      })
-      .select('id')
-      .single();
-
-    if (error) throw new Error(`Error al crear entrega: ${error.message}`);
-
-    if (donacion_id) {
-      await supabase
-        .from('donaciones')
-        .update({
-          estado: 'asignada',
-          voluntario_recoleccion_id: voluntario.user_id
-        })
-        .eq('id', donacion_id);
+    if (error) {
+      throw new Error(error.message || 'Error en entrega');
     }
 
-    if (necesidad_id) {
-      await supabase
-        .from('despachos')
-        .update({ voluntario_id: voluntario.user_id, estado: 'en_transito_a_destino' })
-        .eq('necesidad_id', necesidad_id)
-        .eq('estado', 'preparando');
-    }
-
-    return { idempotente: false, id: nuevaEntrega.id };
+    return data; // { idempotente: bool, id: uuid }
   }
 
   async actualizarEstado(entregaId, nuevoEstado) {
@@ -63,7 +28,6 @@ class EntregaRepository {
   }
 
   async findByVoluntario(telefono) {
-    // Obtener las entregas básicas
     const { data: entregas, error } = await supabase
       .from('entregas')
       .select('*')
@@ -73,11 +37,9 @@ class EntregaRepository {
     if (error) throw new Error(`Error al consultar entregas: ${error.message}`);
     if (!entregas || entregas.length === 0) return [];
 
-    // Enriquecer cada entrega con datos de la donación o necesidad
     const enriquecidas = await Promise.all(
       entregas.map(async (entrega) => {
         if (entrega.donacion_id) {
-          // Join a perfiles usando la foreign key correcta, sin alias, para que el frontend reciba "perfiles.nombre_punto"
           const { data: donacion } = await supabase
             .from('donaciones')
             .select('*, perfiles!donaciones_donante_id_fkey(nombre_punto, telefono)')
@@ -89,7 +51,6 @@ class EntregaRepository {
             tipo_servicio: 'recoleccion',
             detalle: {
               ...donacion,
-              // El frontend espera "perfiles.nombre_punto" y "perfiles.telefono", que ya vienen en el join
               direccion: donacion?.direccion_recogida || 'Sin dirección',
               lat: donacion?.lat_recogida,
               lon: donacion?.lon_recogida

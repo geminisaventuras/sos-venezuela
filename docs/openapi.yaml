@@ -1,0 +1,385 @@
+# @build: 2026-06-29.17-30-00 | id: DOC-API-01 | desc: Documentación OpenAPI 3.0 del sistema SOS Venezuela
+openapi: 3.0.3
+info:
+  title: SOS Venezuela - API de Ayuda ante Terremoto
+  version: 3.0.0
+  description: |
+    API REST para el sistema de gestión de ayuda humanitaria ante terremotos.
+    Proporciona endpoints para donantes, refugios, centros de salud, centros de acopio,
+    voluntarios y administradores.
+
+    ## Autenticación
+    Todas las rutas requieren token JWT de Supabase en el header `Authorization: Bearer <token>`.
+    El token se obtiene mediante autenticación en Supabase Auth.
+
+    ## Formato de errores
+    Todos los errores siguen el estándar RFC 7807:
+    {
+      "success": false,
+      "error": {
+        "code": "CODIGO_ERROR",
+        "message": "Descripción legible",
+        "traceId": "uuid-para-trazabilidad"
+      }
+    }
+
+servers:
+  - url: http://localhost:3000
+    description: Servidor de desarrollo
+  - url: https://sos-venezuela-backend.onrender.com
+    description: Producción
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/perfil:
+    get:
+      summary: Obtener perfil del usuario autenticado
+      tags: [Perfil]
+      responses:
+        '200':
+          description: Perfil obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerfilResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Perfil no encontrado
+    post:
+      summary: Crear o actualizar perfil del usuario autenticado
+      tags: [Perfil]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PerfilInput'
+      responses:
+        '201':
+          description: Perfil creado/actualizado
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/catalogo:
+    get:
+      summary: Buscar items del catálogo unificado
+      tags: [Catálogo]
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+            minLength: 2
+          description: Término de búsqueda (mínimo 2 caracteres)
+        - name: categoria_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filtrar por categoría
+        - name: modulo
+          in: query
+          schema:
+            type: string
+            enum: [medico, alimentos, agua, logistica, ropa_calzado, higiene, otros]
+          description: Filtrar por módulo
+      responses:
+        '200':
+          description: Resultados de búsqueda
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ItemCatalogo'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+    post:
+      summary: Crear nuevo item en el catálogo
+      tags: [Catálogo]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nombre_generico, categoria_id, presentaciones]
+              properties:
+                nombre_generico:
+                  type: string
+                categoria_id:
+                  type: string
+                  format: uuid
+                requiere_vencimiento:
+                  type: boolean
+                presentaciones:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      tipo:
+                        type: string
+                        enum: [presentacion, especificacion, medida]
+                      valor:
+                        type: string
+                      unidad_sugerida:
+                        type: string
+      responses:
+        '201':
+          description: Item creado
+        '409':
+          description: Ya existe un item con ese nombre
+
+  /api/necesidades:
+    post:
+      summary: Registrar una nueva necesidad (refugio/hospital)
+      tags: [Necesidades]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idempotencyKey, punto, ubicacion, items, prioridad, tipo_punto]
+              properties:
+                idempotencyKey:
+                  type: string
+                  format: uuid
+                punto:
+                  type: string
+                ubicacion:
+                  type: object
+                  properties:
+                    lat:
+                      type: number
+                    lon:
+                      type: number
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      tipo:
+                        type: string
+                        enum: [agua_potable, alimentos_no_perecibles, medicinas, colchonetas, ropa, calzado, otros]
+                      cantidad:
+                        type: number
+                      unidad:
+                        type: string
+                      detalle:
+                        type: string
+                prioridad:
+                  type: string
+                  enum: [alta, media, baja]
+                contacto:
+                  type: string
+                tipo_punto:
+                  type: string
+                  enum: [refugio, hospital]
+      responses:
+        '201':
+          description: Necesidad creada
+        '200':
+          description: Necesidad ya existente (idempotente)
+    get:
+      summary: Listar necesidades (según rol del usuario)
+      tags: [Necesidades]
+      responses:
+        '200':
+          description: Lista de necesidades
+
+  /api/donaciones:
+    post:
+      summary: Registrar una nueva donación
+      tags: [Donaciones]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idempotencyKey, centro_acopio, items]
+              properties:
+                idempotencyKey:
+                  type: string
+                  format: uuid
+                centro_acopio:
+                  type: object
+                  properties:
+                    nombre:
+                      type: string
+                    lat:
+                      type: number
+                    lon:
+                      type: number
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      tipo:
+                        type: string
+                      detalle:
+                        type: string
+                      cantidad:
+                        type: number
+                      unidad:
+                        type: string
+                donante:
+                  type: string
+                modo_entrega:
+                  type: string
+                  enum: [propia, recogida]
+                direccion_recogida:
+                  type: string
+                lat_recogida:
+                  type: number
+                lon_recogida:
+                  type: number
+      responses:
+        '201':
+          description: Donación creada
+        '200':
+          description: Donación ya existente (idempotente)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PerfilResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            user_id:
+              type: string
+              format: uuid
+            rol:
+              type: string
+              enum: [super_admin, donante, refugio, centro_salud, centro_acopio, voluntario]
+            nombre_punto:
+              type: string
+            telefono:
+              type: string
+            lat:
+              type: number
+            lon:
+              type: number
+            activo:
+              type: boolean
+
+    PerfilInput:
+      type: object
+      properties:
+        nombre:
+          type: string
+        nombre_punto:
+          type: string
+        telefono:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+
+    ItemCatalogo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre_generico:
+          type: string
+        nombre_normalizado:
+          type: string
+        categoria:
+          $ref: '#/components/schemas/Categoria'
+        presentaciones:
+          type: array
+          items:
+            $ref: '#/components/schemas/Presentacion'
+
+    Categoria:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+        modulo:
+          type: string
+
+    Presentacion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tipo:
+          type: string
+        valor:
+          type: string
+        unidad_sugerida:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Token no proporcionado o inválido
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: AUTH_INVALID
+                  message:
+                    type: string
+                  traceId:
+                    type: string
+
+    ValidationError:
+      description: Datos de entrada inválidos
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: VALIDATION_ERROR
+                  message:
+                    type: string
+                  traceId:
+                    type: string

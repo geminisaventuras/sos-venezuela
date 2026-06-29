@@ -1,4 +1,4 @@
-﻿<!-- @build: 2026-06-30.11-00-00 | id: B25-VOLUNTARIO-FINAL-CONFIRMAR | desc: Dashboard Transportista con confirmación de recogida agregada sin quitar nada -->
+﻿<!-- @build: 2026-06-29.13-00-00 | id: B25-VOLUNTARIO-COMPLETO | desc: Dashboard Transportista con componentes unificados y mapa corregido -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -65,18 +65,8 @@
   </style>
 </head>
 <body>
-  <header class="header">
-    <h1>SOS <span>Venezuela</span></h1>
-    <div class="header-actions">
-      <button class="icon-btn" onclick="actualizarUbicacionGPS()" title="Actualizar mi ubicación">
-        <i class="fa-solid fa-location-crosshairs"></i>
-      </button>
-      <button class="icon-btn" onclick="logout()" title="Cerrar sesión">
-        <i class="fa-solid fa-right-from-bracket"></i>
-      </button>
-      <div class="avatar" id="voluntario-avatar">VL</div>
-    </div>
-  </header>
+  <!-- HEADER UNIFICADO -->
+  <header class="header" id="header-voluntario"></header>
 
   <div class="container">
     <div id="mensaje-global" class="mensaje"></div>
@@ -177,16 +167,15 @@
     </div>
   </div>
 
-  <nav class="bottom-nav">
-    <button class="nav-item active" data-section="inicio"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
-    <button class="nav-item" data-section="recoleccion"><i class="fa-solid fa-hand-holding-heart"></i><span>Recoger</span></button>
-    <button class="nav-item" data-section="distribucion"><i class="fa-solid fa-boxes-packing"></i><span>Distribuir</span></button>
-    <button class="nav-item" data-section="perfil"><i class="fa-solid fa-user"></i><span>Perfil</span></button>
-  </nav>
+  <!-- NAVEGACIÓN INFERIOR -->
+  <nav class="bottom-nav" id="bottom-nav-voluntario"></nav>
 
   <script src="app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="componentes/mensaje.js"></script>
+  <script src="componentes/header.js"></script>
+  <script src="componentes/bottom-nav.js"></script>
   <script>
     if (!verificarSesion(['voluntario'])) throw new Error('Acceso denegado');
 
@@ -196,68 +185,65 @@
     let marcadoresRec = [];
     let marcadoresDis = [];
 
-    document.getElementById('voluntario-avatar').innerText = (perfil.nombre_punto || 'VL').substring(0, 2).toUpperCase();
+    // ========== INICIALIZAR COMPONENTES ==========
+    Mensaje.init('mensaje-global');
 
-    // Actualizar ubicación GPS desde el header
+    HeaderApp.init({
+      contenedorId: 'header-voluntario',
+      titulo: 'SOS Venezuela',
+      subtitulo: '',
+      avatarIniciales: (perfil.nombre_punto || 'VL').substring(0, 2).toUpperCase(),
+      nombreUsuario: perfil.nombre_punto || 'Voluntario',
+      botonesExtra: [
+        { icono: 'fa-solid fa-location-crosshairs', onclick: 'actualizarUbicacionGPS()', title: 'Actualizar mi ubicación' },
+        { icono: 'fa-solid fa-right-from-bracket', onclick: 'logout()', title: 'Cerrar sesión' }
+      ]
+    });
+
+    BottomNav.init({
+      contenedorId: 'bottom-nav-voluntario',
+      activaInicial: 'inicio',
+      secciones: [
+        { id: 'inicio', icono: 'fa-solid fa-house', label: 'Inicio' },
+        { id: 'recoleccion', icono: 'fa-solid fa-hand-holding-heart', label: 'Recoger' },
+        { id: 'distribucion', icono: 'fa-solid fa-boxes-packing', label: 'Distribuir' },
+        { id: 'perfil', icono: 'fa-solid fa-user', label: 'Perfil' }
+      ],
+      onChange: (seccion) => mostrarSeccion(seccion)
+    });
+
+    // ========== FUNCIONES ==========
     async function actualizarUbicacionGPS() {
-      if (!navigator.geolocation) {
-        mostrarMensaje('GPS no soportado', 'error');
-        return;
-      }
+      if (!navigator.geolocation) { Mensaje.mostrar('GPS no soportado', 'error'); return; }
       navigator.geolocation.getCurrentPosition(async pos => {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         try {
-          await apiFetch('/api/perfil', {
-            method: 'POST',
-            body: JSON.stringify({
-              rol: perfil.rol,
-              nombre: perfil.nombre_punto || perfil.nombre,
-              telefono: perfil.telefono || '',
-              lat: lat,
-              lon: lon
-            })
-          });
-          perfil.lat = lat;
-          perfil.lon = lon;
-          mostrarMensaje('📍 Ubicación actualizada', 'exito');
-          if (perfilVoluntario) {
-            perfilVoluntario.lat = lat;
-            perfilVoluntario.lon = lon;
-          }
-        } catch (e) {
-          mostrarMensaje('❌ Error al actualizar ubicación', 'error');
-        }
-      }, () => {
-        mostrarMensaje('No se pudo obtener la ubicación', 'error');
-      }, { enableHighAccuracy: true, timeout: 10000 });
+          await apiFetch('/api/perfil', { method: 'POST', body: JSON.stringify({ rol: perfil.rol, nombre: perfil.nombre_punto || perfil.nombre, telefono: perfil.telefono || '', lat, lon }) });
+          perfil.lat = lat; perfil.lon = lon;
+          Mensaje.mostrar('📍 Ubicación actualizada', 'exito');
+          if (perfilVoluntario) { perfilVoluntario.lat = lat; perfilVoluntario.lon = lon; }
+        } catch (e) { Mensaje.mostrar('❌ Error al actualizar ubicación', 'error'); }
+      }, () => { Mensaje.mostrar('No se pudo obtener la ubicación', 'error'); }, { enableHighAccuracy: true, timeout: 10000 });
     }
 
-    // Logout
     async function logout() {
       if (confirm('¿Cerrar sesión?')) {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('perfil');
+        localStorage.removeItem('authToken'); localStorage.removeItem('perfil');
         window.location.href = '/login.html';
       }
     }
 
     function mostrarSeccion(seccion) {
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById('section-' + seccion).classList.add('active');
-      document.querySelector(`.nav-item[data-section="${seccion}"]`).classList.add('active');
-
       if (seccion === 'inicio') cargarDatos();
       if (seccion === 'recoleccion') initMapaRecoleccion();
       if (seccion === 'distribucion') initMapaDistribucion();
       if (seccion === 'perfil') cargarFormPerfil();
     }
 
-    document.querySelectorAll('.nav-item').forEach(btn => {
-      btn.addEventListener('click', () => mostrarSeccion(btn.dataset.section));
-    });
-
+    // ========== DATOS ==========
     async function cargarDatos() {
       try {
         const res = await apiFetch('/api/voluntarios/mi-perfil');
@@ -340,7 +326,6 @@
             ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}" target="_blank" class="btn btn-navigate"><i class="fa-solid fa-map-pin"></i> Navegar</a>`
             : '';
 
-          // NUEVO: Botón de confirmar recogida si la donación está en estado 'asignada'
           const botonConfirmar = (esRecoleccion && estadoDonacion === 'asignada')
             ? `<button class="btn btn-success" style="margin-top:8px;" onclick="confirmarRecogida('${e.donacion_id}')">✅ Confirmar recogida</button>`
             : '';
@@ -364,14 +349,13 @@
       }
     }
 
-    // NUEVA FUNCIÓN: Confirmar recogida
     window.confirmarRecogida = async function(donacionId) {
       try {
         const res = await apiFetch('/api/donaciones/' + donacionId + '/recoger', { method: 'PATCH' });
-        mostrarMensaje('✅ Recogida confirmada. Ahora puedes llevarlo al acopio.', 'exito');
-        cargarEntregas(); // Refrescar la lista
+        Mensaje.mostrar('✅ Recogida confirmada. Ahora puedes llevarlo al acopio.', 'exito');
+        cargarEntregas();
       } catch (e) {
-        mostrarMensaje('❌ ' + e.message, 'error');
+        Mensaje.mostrar('❌ ' + e.message, 'error');
       }
     };
 
@@ -392,12 +376,15 @@
       };
     }
 
-    // MAPA RECOLECCIÓN
+    // ========== MAPA RECOLECCIÓN ==========
     function initMapaRecoleccion() {
       if (mapaRecoleccion) { mapaRecoleccion.invalidateSize(); return; }
       const coords = getDefaultCoords();
       mapaRecoleccion = L.map('mapa-recoleccion').setView([coords.lat, coords.lon], coords.zoom);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaRecoleccion);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        referrerPolicy: 'no-referrer-when-downgrade'
+      }).addTo(mapaRecoleccion);
       cargarRecolecciones();
     }
 
@@ -422,7 +409,7 @@
                 iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
               })
             }).addTo(mapaRecoleccion)
-              .bindPopup(`<b>Recolección</b><br>${d.detalle_donacion?.map(i => i.cantidad + ' ' + (i.catalogo_insumos?.nombre_mostrar || 'Insumo')).join('<br>') || 'Sin detalles'}`);
+              .bindPopup(`<b>Recolección</b><br>${d.detalle_donacion?.map(i => i.cantidad + ' ' + (i.catalogo_items?.nombre_generico || 'Insumo')).join('<br>') || 'Sin detalles'}`);
             marcadoresRec.push(m);
           }
         });
@@ -435,7 +422,7 @@
           return `
             <div class="entrega-item">
               <strong>Recolección</strong><br>
-              <span style="font-size:13px;color:var(--text-muted);">${d.detalle_donacion?.map(i => i.cantidad + ' ' + (i.catalogo_insumos?.nombre_mostrar || 'Insumo')).join(', ') || 'Sin items'}</span><br>
+              <span style="font-size:13px;color:var(--text-muted);">${d.detalle_donacion?.map(i => i.cantidad + ' ' + (i.catalogo_items?.nombre_generico || 'Insumo')).join(', ') || 'Sin items'}</span><br>
               <span style="font-size:12px;color:#94a3b8;">${d.direccion_recogida || 'Sin dirección'}</span><br>
               <button class="btn btn-success" style="margin-top:8px;" onclick="tomarRecoleccion('${d.id}')">📦 Tomar recolección</button>
               ${enlaceNavegacion}
@@ -459,19 +446,22 @@
             tipo_servicio: 'recoleccion'
           })
         });
-        mostrarMensaje('✅ Recolección asignada. ID: ' + res.data.id, 'exito');
+        Mensaje.mostrar('✅ Recolección asignada. ID: ' + res.data.id, 'exito');
         cargarRecolecciones();
       } catch (e) {
-        mostrarMensaje('❌ ' + e.message, 'error');
+        Mensaje.mostrar('❌ ' + e.message, 'error');
       }
     };
 
-    // MAPA DISTRIBUCIÓN
+    // ========== MAPA DISTRIBUCIÓN ==========
     function initMapaDistribucion() {
       if (mapaDistribucion) { mapaDistribucion.invalidateSize(); return; }
       const coords = getDefaultCoords();
       mapaDistribucion = L.map('mapa-distribucion').setView([coords.lat, coords.lon], coords.zoom);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaDistribucion);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        referrerPolicy: 'no-referrer-when-downgrade'
+      }).addTo(mapaDistribucion);
       cargarDistribuciones();
     }
 
@@ -528,10 +518,10 @@
           method: 'PATCH',
           body: JSON.stringify({ estado: 'en_transito_a_destino' })
         });
-        mostrarMensaje('✅ Despacho asignado.', 'exito');
+        Mensaje.mostrar('✅ Despacho asignado.', 'exito');
         cargarDistribuciones();
       } catch (e) {
-        mostrarMensaje('❌ ' + e.message, 'error');
+        Mensaje.mostrar('❌ ' + e.message, 'error');
       }
     };
 
@@ -551,7 +541,7 @@
         });
     }
 
-    // PERFIL
+    // ========== PERFIL ==========
     document.getElementById('form-perfil').addEventListener('submit', async function(e) {
       e.preventDefault();
       try {
@@ -567,11 +557,11 @@
             activo: true
           })
         });
-        mostrarMensaje('✅ Perfil actualizado', 'exito');
+        Mensaje.mostrar('✅ Perfil actualizado', 'exito');
         mostrarSeccion('inicio');
         cargarDatos();
       } catch (e) {
-        mostrarMensaje('❌ ' + e.message, 'error');
+        Mensaje.mostrar('❌ ' + e.message, 'error');
       }
     });
 
@@ -582,14 +572,6 @@
         document.getElementById('perfil-lon').value = pos.coords.longitude;
         document.getElementById('perfil-coords').innerText = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
       }, () => alert('No se pudo obtener ubicación'), { enableHighAccuracy: true, timeout: 10000 });
-    }
-
-    function mostrarMensaje(texto, tipo) {
-      const msg = document.getElementById('mensaje-global');
-      msg.innerText = texto;
-      msg.className = 'mensaje ' + tipo;
-      msg.style.display = 'block';
-      setTimeout(() => { msg.style.display = 'none'; }, 5000);
     }
 
     mostrarSeccion('inicio');

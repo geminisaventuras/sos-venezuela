@@ -1,4 +1,4 @@
-﻿// @build: 2026-06-28.19-00-00 | id: B0-APP-FINAL | desc: Express con CSP configurada para Supabase y Leaflet
+﻿// @build: 2026-06-28.19-30-00 | id: B0-APP-CSP-FIX | desc: CSP corregida para desarrollo local (localhost) y producción
 const express = require('express')
 const cors = require('cors')
 const helmet = require('helmet')
@@ -12,59 +12,63 @@ const donacionesRoutes = require('./modules/donaciones/routes/donaciones.routes'
 const entregasRoutes = require('./modules/entregas/routes/entregas.routes')
 const catalogoRoutes = require('./modules/catalogo/routes/catalogo.routes')
 const perfilRoutes = require('./modules/perfil/routes/perfil.routes')
-const inventarioRoutes = require('./modules/inventario/routes/inventario.routes');
-const despachosRoutes = require('./modules/despachos/routes/despacho.routes');
+const inventarioRoutes = require('./modules/inventario/routes/inventario.routes')
+const despachosRoutes = require('./modules/despachos/routes/despacho.routes')
+
 const app = express()
 
-// CORS abierto para desarrollo
-app.use(cors())
+// CORS restrictivo: solo orígenes autorizados
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://sos-venezuela-backend.onrender.com'
+]
 
-// Helmet con CSP personalizada para permitir Supabase, Leaflet y scripts inline
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permitir peticiones sin origen (server-to-server, Postman, curl)
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Origen no permitido por CORS'))
+    }
+  },
+  credentials: true
+}))
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: [
-        "'self'",
-        "'unsafe-inline'",
-        "'unsafe-eval'",
-        "https://cdn.jsdelivr.net",
-        "https://unpkg.com",
-        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
-      ],
-      styleSrc: [
-        "'self'",
-        "'unsafe-inline'",
-        "https://unpkg.com",
-        "https://fonts.googleapis.com",
-        "https://cdnjs.cloudflare.com"
-      ],
-      fontSrc: [
-        "'self'",
-        "https://fonts.gstatic.com",
-        "https://cdnjs.cloudflare.com"
-      ],
-      imgSrc: [
-        "'self'",
-        "data:",
-        "https:",
-        "blob:"
-      ],
-      connectSrc: [
-        "'self'",
-        "https://*.supabase.co",
-        "wss://*.supabase.co",
-        "https://nominatim.openstreetmap.org",
-        "https://*.tile.openstreetmap.org"
-      ],
-      frameSrc: ["'self'"],
-      childSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: []
+      defaultSrc: "'self'",
+      scriptSrc: "'self' 'unsafe-inline' 'unsafe-eval' 'unsafe-hashes' https://cdn.jsdelivr.net https://unpkg.com https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",
+      scriptSrcAttr: "'self' 'unsafe-inline' 'unsafe-hashes'",
+      styleSrc: "'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com https://cdnjs.cloudflare.com",
+      fontSrc: "'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com",
+      imgSrc: "'self' data: https: blob: https://*.tile.openstreetmap.org",
+      connectSrc: "'self' http://localhost:3000 https://sos-venezuela-backend.onrender.com https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org",
+      frameSrc: "'self'",
+      childSrc: "'self'",
+      objectSrc: "'none'"
     }
   },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   crossOriginEmbedderPolicy: false
 }))
+
+
+// Servir app.js dinámicamente con la URL del backend inyectada
+app.get('/app.js', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const filePath = path.join(__dirname, '..', 'public', 'app.js');
+  let content = fs.readFileSync(filePath, 'utf8');
+  content = content.replace('__API_BASE__', process.env.API_BASE || 'http://localhost:3000');
+  res.setHeader('Content-Type', 'application/javascript');
+  res.send(content);
+});
+
+
+
 
 // JSON y límites
 app.use(express.json({ limit: '100kb' }))
@@ -100,8 +104,8 @@ app.use('/api/necesidades', necesidadesRoutes)
 app.use('/api/voluntarios', voluntariosRoutes)
 app.use('/api/donaciones', donacionesRoutes)
 app.use('/api/entregas', entregasRoutes)
-app.use('/api/inventario', inventarioRoutes);
-app.use('/api/despachos', despachosRoutes);
+app.use('/api/inventario', inventarioRoutes)
+app.use('/api/despachos', despachosRoutes)
 
 // Manejo de errores
 app.use((err, req, res, next) => {

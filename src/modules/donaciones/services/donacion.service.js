@@ -1,4 +1,6 @@
-// @build: 2026-06-28.09-00-00 | id: B3-DON-SERVICE-TRAZABILIDAD | desc: Servicio con trazabilidad de donación
+// @build: 2026-06-30.14-15-00 | id: B3-DON-SERVICE-MOD-CANCEL | desc: Servicio de donaciones con modificar y cancelar (solo en estado ofrecida)
+const supabase = require('../../../config/supabase');
+
 class DonacionService {
   constructor(donacionRepository, inventarioRepository) {
     this.donacionRepository = donacionRepository;
@@ -41,28 +43,43 @@ class DonacionService {
     return this.donacionRepository.obtenerTrazabilidad(donacionId);
   }
 
-// @build: 2026-06-30.09-00-00 | id: B3-DON-SERVICE-RECOGER | desc: Servicio con confirmación de recogida por el transportista
-async confirmarRecogida(donacionId, userId) {
-  const donacion = await this.donacionRepository.findById(donacionId);
-  if (!donacion) throw new Error('Donación no encontrada');
-  if (donacion.estado !== 'asignada') throw new Error('La donación no está en estado asignada');
-  
-  // Verificar que el usuario sea el voluntario asignado
-  const { data: voluntario } = await supabase
-    .from('voluntarios')
-    .select('user_id')
-    .eq('user_id', userId)
-    .single();
-  if (!voluntario || donacion.voluntario_recoleccion_id !== voluntario.user_id) {
-    throw new Error('No autorizado para confirmar esta recogida');
+  async confirmarRecogida(donacionId, userId) {
+    const donacion = await this.donacionRepository.findById(donacionId);
+    if (!donacion) throw new Error('Donación no encontrada');
+    if (donacion.estado !== 'asignada') throw new Error('La donación no está en estado asignada');
+    
+    const { data: voluntario } = await supabase
+      .from('voluntarios')
+      .select('user_id')
+      .eq('user_id', userId)
+      .single();
+    
+    if (!voluntario || donacion.voluntario_recoleccion_id !== voluntario.user_id) {
+      throw new Error('No autorizado para confirmar esta recogida');
+    }
+    
+    return this.donacionRepository.confirmarRecogida(donacionId);
   }
-  
-  await this.donacionRepository.confirmarRecogida(donacionId);
-  return { id: donacionId, estado: 'en_transito_a_acopio' };
-}
 
+  // NUEVO: Modificar donación (solo en estado 'ofrecida')
+  async modificarDonacion(donacionId, userId, datos) {
+    const donacion = await this.donacionRepository.findById(donacionId);
+    if (!donacion) throw new Error('Donación no encontrada');
+    if (donacion.estado !== 'ofrecida') throw new Error('Solo se pueden modificar donaciones en estado ofrecida');
+    if (donacion.donante_id !== userId) throw new Error('No autorizado');
+    
+    return this.donacionRepository.modificarDonacion(donacionId, userId, datos);
+  }
 
-
+  // NUEVO: Cancelar donación (solo en estado 'ofrecida')
+  async cancelarDonacion(donacionId, userId) {
+    const donacion = await this.donacionRepository.findById(donacionId);
+    if (!donacion) throw new Error('Donación no encontrada');
+    if (donacion.estado !== 'ofrecida') throw new Error('Solo se pueden cancelar donaciones en estado ofrecida');
+    if (donacion.donante_id !== userId) throw new Error('No autorizado');
+    
+    return this.donacionRepository.cancelarDonacion(donacionId, userId);
+  }
 }
 
 module.exports = DonacionService;

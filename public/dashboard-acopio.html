@@ -1,4 +1,4 @@
-﻿<!-- @build: 2026-06-28.07-30-00 | id: B20-ACOPIO-DONACIONES | desc: Dashboard Centro de Acopio con sección Donaciones por recibir -->
+﻿<!-- @build: 2026-06-30.16-00-00 | id: B20-ACOPIO-INTEGRADO | desc: Dashboard Centro de Acopio con componente BuscadorInsumos integrado -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -119,32 +119,7 @@
     <div class="section" id="section-inventario">
       <div class="card">
         <h2><i class="fa-solid fa-plus-circle" style="color:var(--success);"></i> Registrar Ingreso</h2>
-        <form id="form-ingreso">
-          <div class="form-group">
-            <label>Buscar Insumo</label>
-            <div class="search-box">
-              <input type="text" id="buscar-insumo" placeholder="Ej: Paracetamol, Agua..." autocomplete="off" required>
-              <div class="search-results" id="search-results"></div>
-            </div>
-            <input type="hidden" id="insumo-id" required>
-            <input type="hidden" id="insumo-unidad" required>
-          </div>
-          <div class="form-group">
-            <label>Cantidad</label>
-            <input type="number" id="ingreso-cantidad" min="1" placeholder="Ej: 50" required>
-          </div>
-          <div class="form-group" id="grupo-vencimiento" style="display:none;">
-            <label>Fecha de Vencimiento</label>
-            <input type="date" id="ingreso-vencimiento">
-          </div>
-          <div class="form-group">
-            <label>Donante (opcional)</label>
-            <input type="text" id="ingreso-donante" placeholder="Nombre o dejar vacío si es anónimo" maxlength="100">
-          </div>
-          <button type="submit" class="btn btn-success" id="btn-ingreso">
-            <i class="fa-solid fa-plus"></i> Registrar Ingreso
-          </button>
-        </form>
+        <div id="contenedor-buscador-acopio"></div>
       </div>
       <div class="card">
         <h2><i class="fa-solid fa-boxes-stacked" style="color:var(--accent);"></i> Inventario Actual</h2>
@@ -169,7 +144,7 @@
       </div>
     </div>
 
-    <!-- SECCIÓN DONACIONES POR RECIBIR (NUEVA) -->
+    <!-- SECCIÓN DONACIONES POR RECIBIR -->
     <div class="section" id="section-donaciones">
       <div class="card">
         <h2><i class="fa-solid fa-gift" style="color:var(--accent);"></i> Donaciones por recibir</h2>
@@ -195,7 +170,7 @@
     </div>
   </div>
 
-  <!-- MODAL DE CONFIRMAR RECEPCIÓN (NUEVO) -->
+  <!-- MODAL DE CONFIRMAR RECEPCIÓN -->
   <div class="modal-overlay" id="modal-confirmar">
     <div class="modal">
       <h3>✅ Confirmar Recepción de Donación</h3>
@@ -225,6 +200,7 @@
   </nav>
 
   <script src="app.js"></script>
+  <script src="componentes/buscador-insumos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // Verificar sesión
@@ -237,7 +213,6 @@
     let acopioId = null;
     let necesidadSeleccionada = null;
     let donacionSeleccionada = null;
-    let searchTimeout;
 
     // Inicializar
     document.getElementById('acopio-avatar').innerText = (perfil.nombre_punto || 'AC').substring(0, 2).toUpperCase();
@@ -265,88 +240,25 @@
       if (perfilData) acopioId = perfilData.user_id;
     }
 
-    // Búsqueda inteligente de catálogo
-    document.getElementById('buscar-insumo').addEventListener('input', function(e) {
-      clearTimeout(searchTimeout);
-      const query = e.target.value.trim();
-      if (query.length < 2) { document.getElementById('search-results').style.display = 'none'; return; }
-      searchTimeout = setTimeout(async () => {
-const queryNormalizada = query
-  .toLowerCase()
-  .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // quita tildes
-
-const { data, error } = await sb
-  .from('catalogo_insumos')
-  .select('*')
-  .ilike('nombre_normalizado', '%' + queryNormalizada + '%')
-  .limit(8);        if (error || !data) return;
-        const resultsDiv = document.getElementById('search-results');
-        if (data.length > 0) {
-          resultsDiv.innerHTML = data.map(item => 
-            `<div class="search-result-item" onclick="seleccionarInsumo('${item.id}','${item.nombre_mostrar}','${item.unidad_sugerida}',${item.requiere_vencimiento})">
-              ${item.nombre_mostrar} <span style="color:var(--text-muted);font-size:12px;">(${item.unidad_sugerida})</span>
-            </div>`
-          ).join('');
-          resultsDiv.style.display = 'block';
-        } else {
-          resultsDiv.innerHTML = '<div class="search-result-item" style="color:var(--text-muted);">No encontrado. <a onclick="agregarOtro()">Agregar manual</a></div>';
-          resultsDiv.style.display = 'block';
+    // ========== INICIALIZAR COMPONENTE DE BÚSQUEDA ==========
+    BuscadorInsumos.init('contenedor-buscador-acopio', {
+      onAgregar: async function(itemData) {
+        try {
+          const body = {
+            acopio_id: acopioId,
+            insumo_id: itemData.id,
+            tipo: itemData.categoria || 'otros',
+            detalle: itemData.nombre,
+            unidad: itemData.categoria === 'alimentos' ? 'kg' : (itemData.categoria === 'agua' ? 'litros' : 'unidades'),
+            cantidad: itemData.cantidad * (itemData.unidades_empaque || 1),
+            fecha_vencimiento: itemData.vencimiento || null
+          };
+          await apiFetch('/api/inventario/ingreso', { method: 'POST', body: JSON.stringify(body) });
+          mostrarMensaje('✅ Ingreso registrado. Inventario actualizado.', 'exito');
+          cargarInventario();
+        } catch (e) {
+          mostrarMensaje('❌ ' + e.message, 'error');
         }
-      }, 300);
-    });
-
-    function seleccionarInsumo(id, nombre, unidad, requiereVenc) {
-      document.getElementById('buscar-insumo').value = nombre;
-      document.getElementById('insumo-id').value = id;
-      document.getElementById('insumo-unidad').value = unidad;
-      document.getElementById('search-results').style.display = 'none';
-      document.getElementById('grupo-vencimiento').style.display = requiereVenc ? 'block' : 'none';
-    }
-
-    function agregarOtro() {
-      const nombre = document.getElementById('buscar-insumo').value.trim();
-      if (!nombre) return;
-      document.getElementById('insumo-id').value = 'nuevo';
-      document.getElementById('insumo-unidad').value = 'unidades';
-      document.getElementById('search-results').style.display = 'none';
-      alert('Se registrará como insumo nuevo: ' + nombre);
-    }
-
-    document.addEventListener('click', e => { if (!e.target.closest('.search-box')) document.getElementById('search-results').style.display = 'none'; });
-
-    // Ingresar inventario
-    document.getElementById('form-ingreso').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btn-ingreso');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
-      try {
-        const insumoId = document.getElementById('insumo-id').value;
-        const cantidad = parseInt(document.getElementById('ingreso-cantidad').value);
-        const vencimiento = document.getElementById('ingreso-vencimiento').value || null;
-        const donante = document.getElementById('ingreso-donante').value.trim() || null;
-        
-        const body = {
-          acopio_id: acopioId,
-          insumo_id: insumoId === 'nuevo' ? '00000000-0000-0000-0000-000000000000' : insumoId,
-          tipo: 'otros',
-          detalle: document.getElementById('buscar-insumo').value.trim(),
-          unidad: document.getElementById('insumo-unidad').value,
-          cantidad: cantidad,
-          fecha_vencimiento: vencimiento,
-          donante: donante
-        };
-        
-        const res = await apiFetch('/api/inventario/ingreso', { method: 'POST', body: JSON.stringify(body) });
-        mostrarMensaje('✅ Ingreso registrado. Inventario actualizado.', 'exito');
-        this.reset();
-        document.getElementById('grupo-vencimiento').style.display = 'none';
-        cargarInventario();
-      } catch (e) {
-        mostrarMensaje('❌ ' + e.message, 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-plus"></i> Registrar Ingreso';
       }
     });
 
@@ -362,7 +274,7 @@ const { data, error } = await sb
         } else {
           tbody.innerHTML = inventarioActual.map(item => `
             <tr>
-              <td>${item.catalogo_insumos?.nombre_mostrar || item.detalle}</td>
+              <td>${item.catalogo_items?.nombre_generico || item.detalle}</td>
               <td>${item.detalle || '--'}</td>
               <td class="${item.cantidad < 10 ? 'stock-low' : ''}">${item.cantidad} ${item.unidad}</td>
               <td>${item.fecha_vencimiento ? new Date(item.fecha_vencimiento).toLocaleDateString('es-VE') : '--'}</td>
@@ -408,20 +320,20 @@ const { data, error } = await sb
       }
     }
 
-    // Cargar donaciones (NUEVO)
+    // Cargar donaciones
     async function cargarDonaciones() {
       const lista = document.getElementById('lista-donaciones');
       lista.innerHTML = '<div class="loading">Cargando donaciones...</div>';
       try {
         const res = await apiFetch('/api/donaciones?acopio_id=' + acopioId);
-        donacionesActuales = res.data || [];
+        donacionesActuales = (res.data || []).filter(don => don.estado !== 'cancelada' && don.estado !== 'recibida');
         if (donacionesActuales.length === 0) {
           lista.innerHTML = '<div class="empty-state">🎉 No hay donaciones pendientes</div>';
           return;
         }
         lista.innerHTML = donacionesActuales.map(don => {
           const items = don.detalle_donacion || [];
-          const itemsTexto = items.map(i => `${i.cantidad} ${i.unidad} de ${i.catalogo_insumos?.nombre_mostrar || 'Insumo'}`).join(', ');
+          const itemsTexto = items.map(i => `${i.cantidad} ${i.unidad} de ${i.catalogo_items?.nombre_generico || 'Insumo'}`).join(', ');
           const estadoClass = 'badge-' + don.estado.replace(/_/g, '_');
           return `
             <div class="donacion-item">
@@ -442,7 +354,7 @@ const { data, error } = await sb
       }
     }
 
-    // Modal de despacho
+    // Modal de despacho (sin cambios)
     function abrirModalDespacho(necesidadId, punto) {
       necesidadSeleccionada = necesidadId;
       document.getElementById('despacho-destino').innerText = 'Destino: ' + punto;
@@ -453,7 +365,7 @@ const { data, error } = await sb
         itemsDiv.innerHTML = inventarioActual.filter(i => i.cantidad > 0).map(item => `
           <div class="checkbox-item">
             <input type="checkbox" id="chk-${item.id}" value="${item.id}">
-            <label for="chk-${item.id}">${item.catalogo_insumos?.nombre_mostrar || item.detalle} (Stock: ${item.cantidad} ${item.unidad})</label>
+            <label for="chk-${item.id}">${item.catalogo_items?.nombre_generico || item.detalle} (Stock: ${item.cantidad} ${item.unidad})</label>
             <input type="number" id="cant-${item.id}" min="1" max="${item.cantidad}" placeholder="Cant" style="width:80px;" disabled>
           </div>
         `).join('');
@@ -505,14 +417,14 @@ const { data, error } = await sb
       }
     });
 
-    // Modal de confirmar recepción (NUEVO)
+    // Modal de confirmar recepción (sin cambios)
     function abrirModalConfirmar(donacionId) {
       donacionSeleccionada = donacionId;
       const donacion = donacionesActuales.find(d => d.id === donacionId);
       if (donacion) {
         const items = donacion.detalle_donacion || [];
-        document.getElementById('confirmar-info').innerText = `Donación de ${items.map(i => i.cantidad + ' ' + i.unidad + ' de ' + (i.catalogo_insumos?.nombre_mostrar || 'Insumo')).join(', ')}`;
-        document.getElementById('confirmar-detalle').innerHTML = items.map(i => `<div>${i.cantidad} ${i.unidad} de ${i.catalogo_insumos?.nombre_mostrar || 'Insumo'}</div>`).join('');
+        document.getElementById('confirmar-info').innerText = `Donación de ${items.map(i => i.cantidad + ' ' + i.unidad + ' de ' + (i.catalogo_items?.nombre_generico || 'Insumo')).join(', ')}`;
+        document.getElementById('confirmar-detalle').innerHTML = items.map(i => `<div>${i.cantidad} ${i.unidad} de ${i.catalogo_items?.nombre_generico || 'Insumo'}</div>`).join('');
       }
       document.getElementById('modal-confirmar').classList.add('active');
     }

@@ -1,4 +1,4 @@
-﻿<!-- @build: 2026-06-29.20-00-00 | id: B24-DONANTE-FINAL-V6 | desc: Dashboard Donante completo con todas las funciones restauradas, geocodificación directa y modo_entrega corregido -->
+﻿<!-- @build: 2026-07-01.16-00-00 | id: B24-DONANTE-FILTRO-PAGINACION | desc: Dashboard Donante con propagación de dosis, filtro por selector y paginación de 5 en 5 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -33,8 +33,8 @@
     .welcome p { color: var(--text-muted); font-size: 14px; }
     .card { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 20px; }
     .card-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-    .form-group { margin-bottom: 20px; }
-    label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: var(--text-main); }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: var(--text-main); }
     input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 16px; font-family: inherit; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
     .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 600; font-size: 16px; cursor: pointer; transition: all 0.2s; }
@@ -43,6 +43,9 @@
     .btn-success { background: var(--success); color: white; }
     .btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text-muted); }
     .btn-outline.active { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+    .btn-warning { background: var(--warning); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-sm { width: auto; padding: 8px 14px; font-size: 13px; }
     .radio-group { display: flex; gap: 10px; margin-bottom: 20px; }
     .radio-group .btn { flex: 1; }
     .mensaje { padding: 12px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; display: none; }
@@ -71,7 +74,10 @@
     .status-pendiente { background: #fef3c7; color: #92400e; }
     .status-recibida { background: #d1fae5; color: #065f46; }
     .status-distribuida { background: #dbeafe; color: #1e40af; }
+    .status-cancelada { background: #fee2e2; color: #991b1b; }
     .donation-detail { font-size: 13px; color: var(--text-muted); margin: 5px 0; }
+    .action-buttons { display: flex; gap: 8px; margin-top: 10px; }
+    .action-buttons .btn { flex: 1; }
     .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; }
     .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); text-decoration: none; font-size: 10px; font-weight: 500; padding: 5px 15px; border-radius: 8px; background: none; border: none; cursor: pointer; }
     .nav-item i { font-size: 20px; }
@@ -84,6 +90,20 @@
     .search-result-item:hover { background: var(--bg); }
     .loading { text-align: center; padding: 20px; color: var(--text-muted); }
     #mapa-recogida { height: 200px; margin-top: 10px; border-radius: 10px; display: none; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: white; border-radius: var(--radius); padding: 20px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto; }
+    .modal h3 { font-size: 18px; margin-bottom: 16px; }
+    .carrito-container { background: #f9fafb; border: 2px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 16px; }
+    .carrito-container h3 { font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .carrito-item { background: white; padding: 12px; border-radius: 10px; margin-bottom: 8px; border-left: 4px solid var(--accent); display: flex; justify-content: space-between; align-items: center; }
+    .carrito-item-info { flex: 1; }
+    .carrito-item-info strong { font-size: 14px; display: block; }
+    .carrito-item-info span { font-size: 12px; color: var(--text-muted); }
+    .carrito-item-actions { display: flex; gap: 6px; }
+    .paginacion { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px; }
+    .paginacion button { width: auto; padding: 10px 20px; }
+    .paginacion span { font-size: 14px; color: var(--text-muted); }
   </style>
 </head>
 <body>
@@ -111,69 +131,59 @@
     <div class="section active" id="section-nueva">
       <div class="welcome">
         <h2>Registrar Donación</h2>
-        <p>Tu ayuda puede salvar vidas</p>
+        <p>Agrega todos los productos que deseas donar</p>
       </div>
 
       <div class="card">
-        <div class="card-title"><i class="fa-solid fa-box-open" style="color: var(--accent);"></i> ¿Qué vas a donar?</div>
-        
-        <form id="form-donacion">
-          <div class="form-group">
-            <label for="insumo-busqueda">Buscar insumo</label>
-            <div class="search-box">
-              <input type="text" id="insumo-busqueda" placeholder="Ej: Paracetamol, Arroz, Agua..." autocomplete="off" required>
-              <div class="search-results" id="search-results"></div>
-            </div>
-            <input type="hidden" id="insumo-id" required>
-            <input type="hidden" id="insumo-unidad" required>
-          </div>
+        <div class="card-title"><i class="fa-solid fa-box-open" style="color: var(--accent);"></i> Agregar producto al carrito</div>
+        <div id="contenedor-buscador-donante"></div>
+      </div>
 
-          <div class="form-group">
-            <label for="cantidad">Cantidad</label>
-            <input type="number" id="cantidad" min="1" placeholder="Ej: 50" required>
-          </div>
+      <!-- CARRITO -->
+      <div class="carrito-container" id="carrito" style="display:none;">
+        <h3>🛒 Productos a donar <span id="contador-carrito" style="background:var(--danger);color:white;border-radius:50%;padding:2px 10px;font-size:12px;">0</span> <span id="total-productos" style="font-weight:bold;"></span></h3>
+        <div id="lista-carrito"></div>
+        <button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="vaciarCarrito()">🗑️ Vaciar carrito</button>
+      </div>
 
-          <div class="form-group" id="grupo-vencimiento" style="display: none;">
-            <label for="fecha-vencimiento">Fecha de vencimiento</label>
-            <input type="date" id="fecha-vencimiento">
-          </div>
-
-          <div class="form-group">
-            <label>¿Cómo entregarás la donación?</label>
-            <div class="radio-group">
-              <button type="button" class="btn btn-outline active" id="btn-propia" onclick="setModoEntrega('propia')">
-                <i class="fa-solid fa-car"></i> Yo lo llevo
-              </button>
-              <button type="button" class="btn btn-outline" id="btn-recogida" onclick="setModoEntrega('recogida')">
-                <i class="fa-solid fa-truck"></i> Necesito recogida
-              </button>
-            </div>
-          </div>
-
-          <div id="direccion-recogida-group" class="form-group" style="display: none;">
-            <label for="direccion">Dirección de recogida</label>
-            <input type="text" id="direccion" placeholder="Calle, urbanización, referencia">
-            <button type="button" class="btn btn-outline" style="margin-top: 10px;" onclick="obtenerUbicacionGPS()">
-              <i class="fa-solid fa-location-crosshairs"></i> Usar mi ubicación actual
+      <!-- DATOS DE ENTREGA -->
+      <div class="card" id="card-entrega" style="display:none;">
+        <h2>📦 Datos de entrega</h2>
+        <div class="form-group">
+          <label>¿Cómo entregarás la donación?</label>
+          <div class="radio-group">
+            <button type="button" class="btn btn-outline active" id="btn-propia" onclick="setModoEntrega('propia')">
+              <i class="fa-solid fa-car"></i> Yo lo llevo
             </button>
-            <div id="mapa-recogida"></div>
-            <input type="hidden" id="lat-recogida">
-            <input type="hidden" id="lon-recogida">
+            <button type="button" class="btn btn-outline" id="btn-recogida" onclick="setModoEntrega('recogida')">
+              <i class="fa-solid fa-truck"></i> Necesito recogida
+            </button>
           </div>
+        </div>
 
-          <div class="form-group">
-            <label>Centro de Acopio sugerido</label>
-            <div class="acopio-sugerido" id="acopio-sugerido">
-              <h4><i class="fa-solid fa-location-dot"></i> <span id="acopio-nombre">Cargando...</span></h4>
-              <p id="acopio-distancia"></p>
-            </div>
-            <input type="hidden" id="acopio-id" required>
-          </div>
-
-          <button type="submit" class="btn btn-primary" id="btn-submit">
-            <i class="fa-solid fa-heart"></i> Registrar Donación
+        <div id="direccion-recogida-group" class="form-group" style="display: none;">
+          <label for="direccion">Dirección de recogida</label>
+          <input type="text" id="direccion" placeholder="Calle, urbanización, referencia">
+          <button type="button" class="btn btn-outline" style="margin-top: 10px;" onclick="obtenerUbicacionGPS()">
+            <i class="fa-solid fa-location-crosshairs"></i> Usar mi ubicación actual
           </button>
-        </form>
+          <div id="mapa-recogida"></div>
+          <input type="hidden" id="lat-recogida">
+          <input type="hidden" id="lon-recogida">
+        </div>
+
+        <div class="form-group">
+          <label>Centro de Acopio sugerido</label>
+          <div class="acopio-sugerido" id="acopio-sugerido">
+            <h4><i class="fa-solid fa-location-dot"></i> <span id="acopio-nombre">Cargando...</span></h4>
+            <p id="acopio-distancia"></p>
+          </div>
+          <input type="hidden" id="acopio-id">
+        </div>
+
+        <button type="button" class="btn btn-primary" id="btn-submit" onclick="enviarDonacion()">
+          ❤️ Registrar Donación
+        </button>
       </div>
     </div>
 
@@ -183,123 +193,156 @@
         <h2>Mis Donaciones</h2>
         <p>Historial y trazabilidad de tu ayuda</p>
       </div>
-
-      <div class="stats-grid">
-        <div class="stat-box">
-          <div class="stat-number" id="stat-total">0</div>
-          <div class="stat-label">Total Donadas</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-number" id="stat-impacto">0</div>
-          <div class="stat-label">Personas Impactadas</div>
-        </div>
+      <!-- NUEVO: Selector de filtro -->
+      <div class="form-group" style="margin-bottom:15px;">
+        <select id="filtro-estado" onchange="filtrarDonaciones(this.value)" style="width:100%;">
+          <option value="activas">🟢 Activas</option>
+          <option value="completadas">✅ Completadas</option>
+          <option value="canceladas">❌ Canceladas</option>
+          <option value="todas">📋 Todas</option>
+        </select>
       </div>
-
-      <div id="lista-donaciones">
-        <div class="loading">Cargando historial...</div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-number" id="stat-total">0</div><div class="stat-label">Total Donadas</div></div>
+        <div class="stat-box"><div class="stat-number" id="stat-impacto">0</div><div class="stat-label">Personas Impactadas</div></div>
+      </div>
+      <div id="lista-donaciones"><div class="loading">Cargando historial...</div></div>
+      <!-- NUEVO: Paginación -->
+      <div class="paginacion" id="paginacion" style="display:none;">
+        <button class="btn btn-outline btn-sm" id="btn-anterior" onclick="cambiarPagina(-1)">← Anterior</button>
+        <span id="info-pagina"></span>
+        <button class="btn btn-outline btn-sm" id="btn-siguiente" onclick="cambiarPagina(1)">Siguiente →</button>
       </div>
     </div>
 
     <!-- SECCIÓN PERFIL -->
     <div class="section" id="section-perfil">
-      <div class="welcome">
-        <h2>Mi Perfil</h2>
-        <p>Tus datos de contacto</p>
-      </div>
-
+      <div class="welcome"><h2>Mi Perfil</h2><p>Tus datos de contacto</p></div>
       <div class="card">
-        <div class="form-group">
-          <label>Nombre</label>
-          <input type="text" id="perfil-nombre" readonly>
-        </div>
-        <div class="form-group">
-          <label>Correo electrónico</label>
-          <input type="email" id="perfil-email" readonly>
-        </div>
-        <div class="form-group">
-          <label>Teléfono</label>
-          <input type="tel" id="perfil-telefono" readonly>
-        </div>
-        <button class="btn btn-success" onclick="logout()" style="margin-top: 20px;">
-          <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
-        </button>
+        <div class="form-group"><label>Nombre</label><input type="text" id="perfil-nombre" readonly></div>
+        <div class="form-group"><label>Correo electrónico</label><input type="email" id="perfil-email" readonly></div>
+        <div class="form-group"><label>Teléfono</label><input type="tel" id="perfil-telefono" readonly></div>
+        <button class="btn btn-success" onclick="logout()" style="margin-top:20px;"><i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL MODIFICAR DONACIÓN DEL HISTORIAL -->
+  <div class="modal-overlay" id="modal-modificar">
+    <div class="modal">
+      <h3>✏️ Modificar Donación</h3>
+      <div class="form-group"><label for="mod-detalle">Insumo</label><input type="text" id="mod-detalle" placeholder="Nombre del insumo"></div>
+      <div class="form-group"><label for="mod-cantidad">Cantidad</label><input type="number" id="mod-cantidad" min="1" placeholder="Nueva cantidad"></div>
+      <div class="form-group"><label for="mod-unidad">Unidad</label><input type="text" id="mod-unidad" placeholder="unidades, kg, litros..."></div>
+      <button class="btn btn-primary" id="btn-confirmar-modificar"><i class="fa-solid fa-save"></i> Guardar cambios</button>
+      <button class="btn btn-danger" style="margin-top:8px;" onclick="cerrarModalModificar()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- MODAL MODIFICAR ÍTEM DEL CARRITO -->
+  <div class="modal-overlay" id="modal-modificar-carrito">
+    <div class="modal">
+      <h3>✏️ Modificar producto del carrito</h3>
+      <div id="modal-modificar-contenido"></div>
+      <button class="btn btn-primary" onclick="guardarModificacionCarrito()">💾 Guardar</button>
+      <button class="btn btn-danger" style="margin-top:8px;" onclick="cerrarModalModificarCarrito()">Cancelar</button>
     </div>
   </div>
 
   <!-- NAVEGACIÓN INFERIOR -->
   <nav class="bottom-nav">
-    <button class="nav-item active" onclick="cambiarSeccion('nueva')" data-section="nueva">
-      <i class="fa-solid fa-plus-circle"></i>
-      <span>Nueva</span>
-    </button>
-    <button class="nav-item" onclick="cambiarSeccion('mis-donaciones')" data-section="mis-donaciones">
-      <i class="fa-solid fa-list"></i>
-      <span>Mis Donaciones</span>
-    </button>
-    <button class="nav-item" onclick="cambiarSeccion('perfil')" data-section="perfil">
-      <i class="fa-solid fa-user"></i>
-      <span>Perfil</span>
-    </button>
+    <button class="nav-item active" onclick="cambiarSeccion('nueva')" data-section="nueva"><i class="fa-solid fa-plus-circle"></i><span>Nueva</span></button>
+    <button class="nav-item" onclick="cambiarSeccion('mis-donaciones')" data-section="mis-donaciones"><i class="fa-solid fa-list"></i><span>Historial</span></button>
+    <button class="nav-item" onclick="cambiarSeccion('perfil')" data-section="perfil"><i class="fa-solid fa-user"></i><span>Perfil</span></button>
   </nav>
 
+  <!-- SCRIPTS: primero dependencias, luego nuestros componentes, luego el código inline -->
   <script src="app.js"></script>
+  <script src="componentes/mensaje.js"></script>
+  <script src="componentes/carrito.js"></script>
+  <script src="componentes/buscador-insumos.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    // ================================================================
+    // INICIALIZACIÓN
+    // ================================================================
     const sb = supabase.createClient('https://kxqwxiolouhrwddaqynp.supabase.co', 'sb_publishable_iJt58cRTDAYH_j_Mv1bJ4g_g0HdRlBF');
-    let currentUser = null;
-    let modoEntrega = 'propia';
-    let mapaRecogida = null;
-    let markerRecogida = null;
+    let modoEntrega = 'propia', mapaRecogida = null, markerRecogida = null;
+    let donacionSeleccionada = null;
+    let itemEditando = null;
+    let filtroEstado = 'activas'; // Filtro por defecto
+    let paginaActual = 1;
+    const ITEMS_POR_PAGINA = 5;
 
-    // Actualizar ubicación GPS desde el header
-    async function actualizarUbicacionGPS() {
-      if (!navigator.geolocation) {
-        mostrarMensaje('GPS no soportado', 'error');
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(async pos => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        try {
-          await apiFetch('/api/perfil', {
-            method: 'POST',
-            body: JSON.stringify({
-              rol: perfil.rol,
-              nombre: perfil.nombre_punto || perfil.nombre,
-              telefono: perfil.telefono || '',
-              lat: lat,
-              lon: lon
-            })
-          });
-          perfil.lat = lat;
-          perfil.lon = lon;
-          mostrarMensaje('📍 Ubicación actualizada', 'exito');
-        } catch (e) {
-          mostrarMensaje('❌ Error al actualizar ubicación', 'error');
+    // Componentes
+    Mensaje.init('mensaje');
+
+    CarritoInsumos.init({
+      contenedorId: 'carrito',
+      modo: 'donacion',
+      onChange: function(items, evento) {
+        const cardEntrega = document.getElementById('card-entrega');
+        if (items.length === 0) {
+          cardEntrega.style.display = 'none';
+        } else {
+          cardEntrega.style.display = 'block';
         }
-      }, () => {
-        mostrarMensaje('No se pudo obtener la ubicación', 'error');
-      }, { enableHighAccuracy: true, timeout: 10000 });
+        // Manejar evento de edición
+        if (evento && evento.accion === 'editar') {
+          editarItemCarrito(evento.index);
+        }
+      }
+    });
+
+    BuscadorInsumos.init('contenedor-buscador-donante', {
+      onAgregar: function(itemData) {
+        CarritoInsumos.agregar({
+          id: itemData.id,
+          nombre: itemData.nombre,
+          cantidad: itemData.cantidad * (itemData.unidades_empaque || 1),
+          unidad: itemData.categoria === 'alimentos' ? 'kg' : (itemData.categoria === 'agua' ? 'litros' : 'unidades'),
+          categoria: itemData.categoria,
+          extra: { ...itemData.extra } // NUEVO: propagar todos los atributos (dosis, formato, etc.)
+        });
+      }
+    });
+
+    // ================================================================
+    // EDICIÓN DE ÍTEMS DEL CARRITO
+    // ================================================================
+    function editarItemCarrito(index) {
+      const items = CarritoInsumos.obtenerItems();
+      if (!items[index]) return;
+      itemEditando = index;
+      const item = items[index];
+      document.getElementById('modal-modificar-contenido').innerHTML = `
+        <div class="form-group"><label>Insumo</label><input type="text" id="mod-nombre-carrito" value="${item.nombre}" readonly></div>
+        <div class="form-group"><label>Cantidad</label><input type="number" id="mod-cantidad-carrito" value="${item.cantidad}" min="1"></div>
+        <div class="form-group"><label>Unidad</label><input type="text" id="mod-unidad-carrito" value="${item.unidad}"></div>
+      `;
+      document.getElementById('modal-modificar-carrito').classList.add('active');
     }
 
-    function mostrarMensaje(texto, tipo) {
-      const msg = document.getElementById('mensaje');
-      msg.textContent = texto;
-      msg.className = 'mensaje ' + (tipo || 'exito');
-      msg.style.display = 'block';
-      setTimeout(() => { msg.style.display = 'none'; }, 5000);
+    function guardarModificacionCarrito() {
+      if (itemEditando === null) return;
+      const nuevosDatos = {
+        cantidad: parseInt(document.getElementById('mod-cantidad-carrito').value) || 1,
+        unidad: document.getElementById('mod-unidad-carrito').value.trim() || 'unidades'
+      };
+      CarritoInsumos.actualizarItem(itemEditando, nuevosDatos);
+      document.getElementById('modal-modificar-carrito').classList.remove('active');
+      itemEditando = null;
     }
 
-    function cambiarSeccion(seccion) {
-      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById('section-' + seccion).classList.add('active');
-      document.querySelector(`.nav-item[data-section="${seccion}"]`).classList.add('active');
-      if (seccion === 'mis-donaciones') cargarMisDonaciones();
+    function cerrarModalModificarCarrito() {
+      document.getElementById('modal-modificar-carrito').classList.remove('active');
+      itemEditando = null;
     }
 
+    // ================================================================
+    // MODO ENTREGA Y MAPA GPS
+    // ================================================================
     function setModoEntrega(modo) {
       modoEntrega = modo;
       document.getElementById('btn-propia').classList.toggle('active', modo === 'propia');
@@ -307,30 +350,32 @@
       document.getElementById('direccion-recogida-group').style.display = modo === 'recogida' ? 'block' : 'none';
       if (modo === 'recogida') {
         document.getElementById('mapa-recogida').style.display = 'block';
-        if (!mapaRecogida) inicializarMapaRecogida();
-        else setTimeout(() => mapaRecogida.invalidateSize(), 100);
+        if (!mapaRecogida) initMapa(); else setTimeout(() => mapaRecogida.invalidateSize(), 100);
       } else {
         document.getElementById('mapa-recogida').style.display = 'none';
       }
     }
 
-    function inicializarMapaRecogida() {
+    function initMapa() {
       mapaRecogida = L.map('mapa-recogida').setView([10.48, -66.90], 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaRecogida);
-      mapaRecogida.on('click', function(e) {
-        colocarMarkerRecogida(e.latlng.lat, e.latlng.lng);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+        referrerPolicy: 'strict-origin-when-cross-origin'
+      }).addTo(mapaRecogida);
+      mapaRecogida.on('click', e => {
+        colocarMarker(e.latlng.lat, e.latlng.lng);
         geocodificarInversa(e.latlng.lat, e.latlng.lng);
       });
     }
 
-    function colocarMarkerRecogida(lat, lon) {
+    function colocarMarker(lat, lon) {
       if (markerRecogida) mapaRecogida.removeLayer(markerRecogida);
       markerRecogida = L.marker([lat, lon], { draggable: true }).addTo(mapaRecogida);
-      markerRecogida.on('dragend', function() {
-        var pos = markerRecogida.getLatLng();
-        document.getElementById('lat-recogida').value = pos.lat.toFixed(6);
-        document.getElementById('lon-recogida').value = pos.lng.toFixed(6);
-        geocodificarInversa(pos.lat, pos.lng);
+      markerRecogida.on('dragend', () => {
+        const p = markerRecogida.getLatLng();
+        document.getElementById('lat-recogida').value = p.lat.toFixed(6);
+        document.getElementById('lon-recogida').value = p.lng.toFixed(6);
+        geocodificarInversa(p.lat, p.lng);
       });
       document.getElementById('lat-recogida').value = lat.toFixed(6);
       document.getElementById('lon-recogida').value = lon.toFixed(6);
@@ -338,309 +383,297 @@
 
     async function geocodificarInversa(lat, lon) {
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-        const data = await res.json();
-        if (data && data.display_name) {
-          document.getElementById('direccion').value = data.display_name;
-        }
-      } catch (err) {
-        console.error('Error en geocodificación inversa:', err);
-      }
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+        const d = await r.json();
+        if (d?.display_name) document.getElementById('direccion').value = d.display_name;
+      } catch {}
     }
-
-    let searchTimeout;
-    document.getElementById('insumo-busqueda').addEventListener('input', function(e) {
-      clearTimeout(searchTimeout);
-      const query = e.target.value.trim();
-      if (query.length < 2) { document.getElementById('search-results').style.display = 'none'; return; }
-      searchTimeout = setTimeout(async () => {
-        try {
-          const queryNormalizada = query
-            .toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          const { data, error } = await sb
-            .from('catalogo_insumos')
-            .select('*')
-            .ilike('nombre_normalizado', `%${queryNormalizada}%`)
-            .limit(5);
-          if (error) throw error;
-          const resultsDiv = document.getElementById('search-results');
-          if (data && data.length > 0) {
-            resultsDiv.innerHTML = data.map(item => `
-              <div class="search-result-item" onclick="selectInsumo('${item.id}', '${item.nombre_mostrar}', '${item.unidad_sugerida}', ${item.requiere_vencimiento})">
-                <div style="font-weight: 600;">${item.nombre_mostrar}</div>
-                <div style="font-size: 12px; color: var(--text-muted);">Unidad: ${item.unidad_sugerida}</div>
-              </div>
-            `).join('');
-            resultsDiv.style.display = 'block';
-          } else {
-            resultsDiv.innerHTML = '<div class="search-result-item" style="color: var(--text-muted);">No se encontraron resultados</div>';
-            resultsDiv.style.display = 'block';
-          }
-        } catch (err) { console.error('Error buscando:', err); }
-      }, 300);
-    });
-
-    function selectInsumo(id, nombre, unidad, requiereVencimiento) {
-      document.getElementById('insumo-busqueda').value = nombre;
-      document.getElementById('insumo-id').value = id;
-      document.getElementById('insumo-unidad').value = unidad;
-      document.getElementById('search-results').style.display = 'none';
-      if (requiereVencimiento) {
-        document.getElementById('grupo-vencimiento').style.display = 'block';
-        document.getElementById('fecha-vencimiento').required = true;
-      } else {
-        document.getElementById('grupo-vencimiento').style.display = 'none';
-        document.getElementById('fecha-vencimiento').required = false;
-      }
-    }
-
-    document.addEventListener('click', function(e) {
-      if (!e.target.closest('.search-box')) document.getElementById('search-results').style.display = 'none';
-    });
 
     function obtenerUbicacionGPS() {
-      if (!navigator.geolocation) { alert('Tu navegador no soporta geolocalización'); return; }
-      const btn = document.querySelector('#direccion-recogida-group .btn-outline');
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Obteniendo ubicación...';
-      btn.disabled = true;
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          document.getElementById('lat-recogida').value = lat;
-          document.getElementById('lon-recogida').value = lon;
-          if (!mapaRecogida) inicializarMapaRecogida();
-          mapaRecogida.setView([lat, lon], 15);
-          colocarMarkerRecogida(lat, lon);
-          await geocodificarInversa(lat, lon);
-          btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Usar mi ubicación actual';
-          btn.disabled = false;
-        },
-        (error) => {
-          console.error('Error GPS:', error);
-          alert('No se pudo obtener tu ubicación. Asegúrate de dar permisos al navegador.');
-          btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Usar mi ubicación actual';
-          btn.disabled = false;
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
+      if (!navigator.geolocation) return alert('GPS no disponible');
+      const b = document.querySelector('#direccion-recogida-group .btn-outline');
+      b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Obteniendo...';
+      b.disabled = true;
+      navigator.geolocation.getCurrentPosition(async p => {
+        const { latitude, longitude } = p.coords;
+        document.getElementById('lat-recogida').value = latitude;
+        document.getElementById('lon-recogida').value = longitude;
+        if (!mapaRecogida) initMapa();
+        mapaRecogida.setView([latitude, longitude], 15);
+        colocarMarker(latitude, longitude);
+        await geocodificarInversa(latitude, longitude);
+        b.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Usar mi ubicación actual';
+        b.disabled = false;
+      }, () => {
+        alert('No se pudo obtener ubicación');
+        b.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Usar mi ubicación actual';
+        b.disabled = false;
+      }, { enableHighAccuracy: true, timeout: 10000 });
     }
 
+    // ================================================================
+    // ACOPIO CERCANO
+    // ================================================================
     async function encontrarAcopioCercano() {
       try {
-        const { data: acopios } = await sb
-          .from('perfiles')
-          .select('user_id, nombre_punto, estado')
-          .eq('rol', 'centro_acopio')
-          .eq('activo', true)
-          .limit(20);
-
-        if (acopios && acopios.length > 0) {
-          const acopio = acopios[0];
-          document.getElementById('acopio-nombre').textContent = acopio.nombre_punto || 'Centro de Acopio';
-          document.getElementById('acopio-distancia').textContent = acopio.estado || 'Venezuela';
-          document.getElementById('acopio-id').value = acopio.user_id;
-
-          if (acopios.length > 1) {
-            let selector = '<select id="selector-acopios" style="width:100%; padding:8px; margin-top:8px; border-radius:8px; border:1px solid var(--border);">';
-            acopios.forEach(a => {
-              selector += `<option value="${a.user_id}">${a.nombre_punto || 'Acopio'} (${a.estado || 'Venezuela'})</option>`;
-            });
-            selector += '</select>';
-            document.getElementById('acopio-sugerido').innerHTML += selector;
-
+        const { data: a } = await sb.from('perfiles').select('user_id,nombre_punto,estado').eq('rol','centro_acopio').eq('activo',true).limit(20);
+        if (a?.length) {
+          const p = a[0];
+          document.getElementById('acopio-nombre').textContent = p.nombre_punto || 'Centro de Acopio';
+          document.getElementById('acopio-distancia').textContent = p.estado || 'Venezuela';
+          document.getElementById('acopio-id').value = p.user_id;
+          if (a.length > 1) {
+            let s = '<select id="selector-acopios" style="width:100%;padding:8px;margin-top:8px;border-radius:8px;border:1px solid var(--border);">';
+            a.forEach(x => { s += `<option value="${x.user_id}">${x.nombre_punto || 'Acopio'} (${x.estado || 'Venezuela'})</option>`; });
+            s += '</select>';
+            document.getElementById('acopio-sugerido').innerHTML += s;
             document.getElementById('selector-acopios').addEventListener('change', function() {
               document.getElementById('acopio-id').value = this.value;
-              const seleccionado = acopios.find(a => a.user_id === this.value);
-              document.getElementById('acopio-nombre').textContent = seleccionado?.nombre_punto || 'Acopio';
+              document.getElementById('acopio-nombre').textContent = a.find(x => x.user_id === this.value)?.nombre_punto || 'Acopio';
             });
           }
         } else {
           document.getElementById('acopio-nombre').textContent = 'No hay acopios disponibles';
         }
-      } catch (err) {
-        console.error('Error buscando acopios:', err);
-        document.getElementById('acopio-nombre').textContent = 'Error al cargar acopios';
+      } catch {}
+    }
+
+    // ================================================================
+    // UTILIDADES
+    // ================================================================
+    function cambiarSeccion(s) {
+      document.querySelectorAll('.section').forEach(e => e.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+      document.getElementById('section-' + s).classList.add('active');
+      document.querySelector(`.nav-item[data-section="${s}"]`).classList.add('active');
+      if (s === 'mis-donaciones') cargarMisDonaciones();
+    }
+
+    async function actualizarUbicacionGPS() {
+      if (!navigator.geolocation) { Mensaje.mostrar('GPS no soportado', 'error'); return; }
+      navigator.geolocation.getCurrentPosition(async pos => {
+        try {
+          await apiFetch('/api/perfil', { method: 'POST', body: JSON.stringify({ rol: perfil.rol, nombre: perfil.nombre_punto || perfil.nombre, telefono: perfil.telefono || '', lat: pos.coords.latitude, lon: pos.coords.longitude }) });
+          perfil.lat = pos.coords.latitude; perfil.lon = pos.coords.longitude;
+          Mensaje.mostrar('📍 Ubicación actualizada', 'exito');
+        } catch (e) { Mensaje.mostrar('❌ Error', 'error'); }
+      }, () => { Mensaje.mostrar('No se pudo obtener ubicación', 'error'); }, { enableHighAccuracy: true, timeout: 10000 });
+    }
+
+    async function logout() {
+      if (confirm('¿Cerrar sesión?')) {
+        await sb.auth.signOut();
+        localStorage.removeItem('authToken'); localStorage.removeItem('perfil');
+        window.location.href = '/login.html';
       }
     }
 
-    document.getElementById('form-donacion').addEventListener('submit', async function(e) {
-      e.preventDefault();
+    // ================================================================
+    // ENVIAR DONACIÓN
+    // ================================================================
+    async function enviarDonacion() {
+      const items = CarritoInsumos.obtenerItems();
+      if (items.length === 0) { Mensaje.mostrar('Agregue al menos un producto', 'error'); return; }
+      if (modoEntrega === 'recogida' && !document.getElementById('direccion').value) { Mensaje.mostrar('Ingrese la dirección de recogida', 'error'); return; }
       const btn = document.getElementById('btn-submit');
-      const mensaje = document.getElementById('mensaje');
-
-      if (!document.getElementById('insumo-id').value) {
-        mensaje.textContent = 'Por favor selecciona un insumo de la lista';
-        mensaje.className = 'mensaje error';
-        mensaje.style.display = 'block';
-        return;
-      }
-
-      if (modoEntrega === 'recogida' && !document.getElementById('direccion').value) {
-        mensaje.textContent = 'Por favor ingresa la dirección de recogida';
-        mensaje.className = 'mensaje error';
-        mensaje.style.display = 'block';
-        return;
-      }
-
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
-      mensaje.style.display = 'none';
-
+      btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
       try {
         const body = {
           idempotencyKey: crypto.randomUUID(),
-          centro_acopio: {
-            nombre: document.getElementById('acopio-nombre').textContent,
-            lat: 10.4806,
-            lon: -66.9036
-          },
-          items: [{
-            tipo: 'otros',
-            detalle: document.getElementById('insumo-busqueda').value.trim(),
-            cantidad: parseInt(document.getElementById('cantidad').value),
-            unidad: document.getElementById('insumo-unidad').value
-          }],
+          centro_acopio: { nombre: document.getElementById('acopio-nombre').textContent, lat: 10.4806, lon: -66.9036 },
+          items: items.map(item => {
+            let detalle = item.nombre;
+            if (item.extra?.dosis) detalle += ' ' + item.extra.dosis;
+            else if (item.extra?.volumen) detalle += ' ' + item.extra.volumen;
+            else if (item.extra?.peso) detalle += ' ' + item.extra.peso;
+            return { tipo: item.categoria || 'otros', detalle, cantidad: item.cantidad, unidad: item.unidad, ...item.extra };
+          }),
           donante: perfil.nombre_punto || 'Donante'
         };
-
         if (modoEntrega === 'recogida') {
           body.modo_entrega = 'recogida';
           body.direccion_recogida = document.getElementById('direccion').value;
           body.lat_recogida = document.getElementById('lat-recogida').value || null;
           body.lon_recogida = document.getElementById('lon-recogida').value || null;
         }
-
         const res = await apiFetch('/api/donaciones', { method: 'POST', body: JSON.stringify(body) });
-        mensaje.textContent = '✅ Donación registrada. ID: ' + res.data.id;
-        mensaje.className = 'mensaje exito';
-        mensaje.style.display = 'block';
-
-        document.getElementById('form-donacion').reset();
-        document.getElementById('grupo-vencimiento').style.display = 'none';
-        document.getElementById('search-results').style.display = 'none';
+        Mensaje.mostrar('✅ Donación registrada. ID: ' + res.data.id, 'exito');
+        document.getElementById('direccion').value = '';
+        CarritoInsumos.vaciar(true);
       } catch (err) {
-        mensaje.textContent = '❌ ' + err.message;
-        mensaje.className = 'mensaje error';
-        mensaje.style.display = 'block';
+        Mensaje.mostrar('❌ ' + err.message, 'error');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-heart"></i> Registrar Donación';
+        btn.innerHTML = '❤️ Registrar Donación';
       }
-    });
+    }
 
+    // ================================================================
+    // NUEVO: Filtro y paginación
+    // ================================================================
+    function filtrarDonaciones(estado) {
+      filtroEstado = estado;
+      paginaActual = 1; // resetear a la primera página
+      cargarMisDonaciones();
+    }
+
+    function cambiarPagina(direccion) {
+      paginaActual += direccion;
+      cargarMisDonaciones();
+    }
+
+    // ================================================================
+    // HISTORIAL DE DONACIONES
+    // ================================================================
     async function cargarMisDonaciones() {
       const lista = document.getElementById('lista-donaciones');
-      lista.innerHTML = '<div class="loading">Cargando historial...</div>';
+      lista.innerHTML = '<div class="loading">Cargando...</div>';
       try {
         const { data: { user } } = await sb.auth.getUser();
-        const { data: donaciones, error } = await sb
-          .from('donaciones')
-          .select('*, detalle_donacion(*, catalogo_insumos(nombre_mostrar)), acopio_destino:perfiles!donaciones_acopio_destino_id_fkey(nombre_punto)')
-          .eq('donante_id', user.id)
-          .order('creado_en', { ascending: false });
-
+        const { data: donaciones, error } = await sb.from('donaciones').select('*, detalle_donacion(*, catalogo_items(nombre_generico)), acopio_destino:perfiles!donaciones_acopio_destino_id_fkey(nombre_punto)').eq('donante_id', user.id).order('creado_en', { ascending: false });
         if (error) throw error;
-        if (!donaciones || donaciones.length === 0) {
-          lista.innerHTML = '<div class="card" style="padding: 40px; text-align: center;"><i class="fa-solid fa-box-open" style="font-size: 48px; color: var(--text-muted); margin-bottom: 15px; opacity: 0.3;"></i><p style="color: var(--text-muted);">Aún no has realizado donaciones</p></div>';
-          document.getElementById('stat-total').textContent = '0';
+
+        // Aplicar filtro de estado
+        let donacionesFiltradas = donaciones;
+        if (filtroEstado === 'activas') {
+          donacionesFiltradas = donaciones.filter(d => ['ofrecida', 'asignada', 'en_transito_a_acopio'].includes(d.estado));
+          if (donacionesFiltradas.length === 0) {
+            // Cambiar automáticamente a completadas
+            filtroEstado = 'completadas';
+            document.getElementById('filtro-estado').value = 'completadas';
+            donacionesFiltradas = donaciones.filter(d => ['recibida', 'cancelada', 'totalmente_rechazada'].includes(d.estado));
+          }
+        } else if (filtroEstado === 'completadas') {
+          donacionesFiltradas = donaciones.filter(d => ['recibida', 'totalmente_rechazada'].includes(d.estado));
+        } else if (filtroEstado === 'canceladas') {
+          donacionesFiltradas = donaciones.filter(d => ['cancelada'].includes(d.estado));
+        }
+
+        if (!donacionesFiltradas?.length) {
+          const mensaje = filtroEstado === 'activas' ? 'No tienes donaciones activas' : 
+                         (filtroEstado === 'completadas' ? 'No tienes donaciones completadas' : 
+                         (filtroEstado === 'canceladas' ? 'No tienes donaciones canceladas' : 'Aún no has realizado donaciones'));
+          lista.innerHTML = `<div class="card" style="padding:40px;text-align:center;"><i class="fa-solid fa-box-open" style="font-size:48px;color:var(--text-muted);margin-bottom:15px;opacity:0.3;"></i><p style="color:var(--text-muted);">${mensaje}</p></div>`;
+          document.getElementById('paginacion').style.display = 'none';
           return;
         }
 
-        document.getElementById('stat-total').textContent = donaciones.length;
-        const totalItems = donaciones.reduce((sum, d) => sum + (d.detalle_donacion?.reduce((s, det) => s + det.cantidad, 0) || 0), 0);
-        document.getElementById('stat-impacto').textContent = totalItems;
+        // Paginación
+        const totalPaginas = Math.ceil(donacionesFiltradas.length / ITEMS_POR_PAGINA);
+        if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+        if (paginaActual < 1) paginaActual = 1;
+        const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+        const paginaDonaciones = donacionesFiltradas.slice(inicio, inicio + ITEMS_POR_PAGINA);
 
-        lista.innerHTML = donaciones.map(d => {
-          const detalle = d.detalle_donacion?.[0];
-          const insumo = detalle?.catalogo_insumos;
-          const estadoClass = d.estado === 'recibida' ? 'status-recibida' : d.estado === 'distribuida' ? 'status-distribuida' : 'status-pendiente';
-          return `
-            <div class="donation-item">
-              <div class="donation-header">
-                <div class="donation-title">${insumo?.nombre_mostrar || 'Insumo'}</div>
-                <span class="donation-status ${estadoClass}">${d.estado}</span>
-              </div>
-              <div class="donation-detail">Cantidad: ${detalle?.cantidad || 0} ${detalle?.unidad || 'unidades'}</div>
-              <div class="donation-detail">Acopio destino: ${d.acopio_destino?.nombre_punto || 'Asignado'}</div>
-              <div class="donation-detail">Fecha: ${new Date(d.creado_en).toLocaleDateString('es-VE')}</div>
-              ${d.estado === 'recibida' ? `
-                <div class="timeline" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
-                  <div class="timeline-item completed">
-                    <div class="timeline-title">Donación registrada</div>
-                    <div class="timeline-date">${new Date(d.creado_en).toLocaleString('es-VE')}</div>
-                  </div>
-                  <div class="timeline-item completed">
-                    <div class="timeline-title">Recibida en acopio</div>
-                    <div class="timeline-date">${d.fecha_recibida ? new Date(d.fecha_recibida).toLocaleString('es-VE') : 'N/A'}</div>
-                  </div>
-                </div>
-                <button class="btn btn-primary" style="margin-top:10px;" onclick="verTrazabilidad('${d.id}')">
-                  🔍 Ver trazabilidad completa
-                </button>
-              ` : ''}
-            </div>
-          `;
+        // Estadísticas estáticas (totales, no dependen del filtro)
+        const activas = donaciones.filter(d => d.estado !== 'cancelada');
+        document.getElementById('stat-total').textContent = activas.length;
+        document.getElementById('stat-impacto').textContent = activas.reduce((s, d) => s + (d.detalle_donacion?.reduce((ss, dd) => ss + dd.cantidad, 0) || 0), 0);
+
+        // Renderizar donaciones de la página actual
+        lista.innerHTML = paginaDonaciones.map(d => {
+          const primerDetalle = d.detalle_donacion?.[0];
+          const insumoNombre = primerDetalle?.catalogo_items?.nombre_generico
+                            || primerDetalle?.detalle?.replace(/^\d+\s+\w+\s+de\s+/, '')
+                            || 'Insumo';
+
+          const productos = d.detalle_donacion?.map(det => {
+            const insumo = det.detalle || det.catalogo_items?.nombre_generico || insumoNombre;
+            return `${det.cantidad} ${det.unidad || 'unidades'} de ${insumo}`;
+          }).join(', ') || 'Sin productos';
+
+          const estadoClass = d.estado === 'recibida' ? 'status-recibida' : d.estado === 'distribuida' ? 'status-distribuida' : d.estado === 'cancelada' ? 'status-cancelada' : 'status-pendiente';
+          let tl = `<div class="timeline" style="margin-top:15px;padding-top:15px;border-top:1px solid var(--border);"><div class="timeline-item completed"><div class="timeline-title">Donación registrada</div><div class="timeline-date">${new Date(d.creado_en).toLocaleString('es-VE')}</div></div>`;
+          if (d.estado === 'asignada' || d.estado === 'en_transito_a_acopio' || d.estado === 'recibida' || d.estado === 'distribuida') tl += `<div class="timeline-item completed"><div class="timeline-title">Transportista asignado</div><div class="timeline-date">${d.voluntario_recoleccion_id ? 'Asignado' : 'Pendiente'}</div></div>`;
+          if (d.estado === 'en_transito_a_acopio' || d.estado === 'recibida' || d.estado === 'distribuida') tl += `<div class="timeline-item completed"><div class="timeline-title">Recogida confirmada</div><div class="timeline-date">${d.fecha_recibida ? new Date(d.fecha_recibida).toLocaleString('es-VE') : 'En proceso'}</div></div>`;
+          if (d.estado === 'recibida' || d.estado === 'distribuida') tl += `<div class="timeline-item completed"><div class="timeline-title">Recibida en acopio</div><div class="timeline-date">${d.fecha_recibida ? new Date(d.fecha_recibida).toLocaleString('es-VE') : 'N/A'}</div></div>`;
+          if (d.estado === 'cancelada') tl += `<div class="timeline-item pending"><div class="timeline-title">Cancelada</div><div class="timeline-date">${new Date(d.creado_en).toLocaleString('es-VE')}</div></div>`;
+          tl += '</div>';
+          const acciones = d.estado === 'ofrecida' ? `<div class="action-buttons"><button class="btn btn-warning" onclick="abrirModalModificar('${d.id}','${insumoNombre.replace(/'/g, "\\'")}','${primerDetalle?.cantidad||0}','${primerDetalle?.unidad||'unidades'}')">✏️ Modificar</button><button class="btn btn-danger" onclick="cancelarDonacion('${d.id}')">🗑️ Cancelar</button></div>` : '';
+          return `<div class="donation-item"><div class="donation-header"><div class="donation-title">${productos}</div><span class="donation-status ${estadoClass}">${d.estado}</span></div><div class="donation-detail">Acopio: ${d.acopio_destino?.nombre_punto||'Asignado'}</div><div class="donation-detail">Fecha: ${new Date(d.creado_en).toLocaleDateString('es-VE')}</div>${tl}${acciones}<button class="btn btn-primary" style="margin-top:10px;" onclick="verTrazabilidad('${d.id}')">🔍 Ver trazabilidad</button></div>`;
         }).join('');
-      } catch (err) {
-        console.error('Error cargando donaciones:', err);
-        lista.innerHTML = '<div class="card" style="padding: 40px; text-align: center;"><p style="color: var(--danger);">Error al cargar el historial</p></div>';
-      }
+
+        // Actualizar paginación
+        const paginacionDiv = document.getElementById('paginacion');
+        if (totalPaginas > 1) {
+          paginacionDiv.style.display = 'flex';
+          document.getElementById('btn-anterior').disabled = paginaActual === 1;
+          document.getElementById('btn-siguiente').disabled = paginaActual === totalPaginas;
+          document.getElementById('info-pagina').textContent = `Página ${paginaActual} de ${totalPaginas}`;
+        } else {
+          paginacionDiv.style.display = 'none';
+        }
+
+      } catch { lista.innerHTML = '<div class="card" style="padding:40px;text-align:center;"><p style="color:var(--danger);">Error al cargar historial</p></div>'; }
     }
+
+    // ================================================================
+    // MODALES DEL HISTORIAL
+    // ================================================================
+    function abrirModalModificar(id, detalle, cantidad, unidad) {
+      donacionSeleccionada = id;
+      document.getElementById('mod-detalle').value = detalle || '';
+      document.getElementById('mod-cantidad').value = cantidad || '';
+      document.getElementById('mod-unidad').value = unidad || 'unidades';
+      document.getElementById('modal-modificar').classList.add('active');
+    }
+    function cerrarModalModificar() { document.getElementById('modal-modificar').classList.remove('active'); donacionSeleccionada = null; }
+
+    document.getElementById('btn-confirmar-modificar').addEventListener('click', async function() {
+      const b = this; b.disabled = true; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+      try {
+        const body = {};
+        const detalle = document.getElementById('mod-detalle').value.trim();
+        const cantidad = parseInt(document.getElementById('mod-cantidad').value);
+        const unidad = document.getElementById('mod-unidad').value.trim();
+        if (detalle) body.detalle = detalle;
+        if (cantidad > 0) body.cantidad = cantidad;
+        if (unidad) body.unidad = unidad;
+        await apiFetch('/api/donaciones/' + donacionSeleccionada, { method: 'PATCH', body: JSON.stringify(body) });
+        Mensaje.mostrar('✅ Donación modificada', 'exito');
+        cerrarModalModificar();
+        cargarMisDonaciones();
+      } catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
+      finally { b.disabled = false; b.innerHTML = '<i class="fa-solid fa-save"></i> Guardar cambios'; }
+    });
+
+    window.cancelarDonacion = async function(donacionId) {
+      if (!confirm('¿Cancelar esta donación?')) return;
+      try { await apiFetch('/api/donaciones/' + donacionId + '/cancelar', { method: 'PATCH' }); Mensaje.mostrar('✅ Donación cancelada', 'exito'); cargarMisDonaciones(); }
+      catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
+    };
 
     window.verTrazabilidad = async function(donacionId) {
       try {
         const token = localStorage.getItem('authToken');
-        const res = await fetch('https://sos-venezuela-backend.onrender.com/api/donaciones/' + donacionId + '/trazabilidad', {
-          headers: { Authorization: 'Bearer ' + token }
-        });
+        const res = await fetch(API_BASE + '/api/donaciones/' + donacionId + '/trazabilidad', { headers: { Authorization: 'Bearer ' + token } });
         if (!res.ok) throw new Error('Error al obtener trazabilidad');
         const data = await res.json();
         if (!data.success) throw new Error(data.error?.message || 'Error');
         const t = data.data;
-        let mensaje = `📦 Trazabilidad de tu donación\n\n`;
-        mensaje += `Insumos: ${t.insumos.map(i => i.cantidad + ' ' + i.unidad + ' de ' + i.nombre).join(', ')}\n`;
-        mensaje += `Estado actual: ${t.estado_actual}\n\n`;
-        mensaje += `Línea de tiempo:\n`;
-        t.timeline.forEach(item => {
-          mensaje += `• ${new Date(item.fecha).toLocaleString('es-VE')}: ${item.descripcion}\n`;
-        });
-        if (t.despachos && t.despachos.length > 0) {
-          mensaje += `\n📦 Despachos realizados:\n`;
-          t.despachos.forEach(d => {
-            mensaje += `• A ${d.destino} (${d.tipo_destino}) - ${d.estado}\n`;
-          });
-        }
+        let mensaje = `📦 Trazabilidad de tu donación\n\nInsumos: ${t.insumos.map(i => i.cantidad+' '+i.unidad+' de '+i.nombre).join(', ')}\nEstado actual: ${t.estado_actual}\n\nLínea de tiempo:\n`;
+        t.timeline.forEach(item => { mensaje += `• ${new Date(item.fecha).toLocaleString('es-VE')}: ${item.descripcion}\n`; });
+        if (t.despachos?.length) { mensaje += '\n📦 Despachos realizados:\n'; t.despachos.forEach(d => { mensaje += `• A ${d.destino} (${d.tipo_destino}) - ${d.estado}\n`; }); }
         alert(mensaje);
-      } catch (e) {
-        alert('Error al obtener trazabilidad: ' + e.message);
-      }
+      } catch (e) { alert('Error al obtener trazabilidad: ' + e.message); }
     };
 
-    async function logout() {
-      if (confirm('¿Estás seguro de cerrar sesión?')) {
-        await sb.auth.signOut();
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('perfil');
-        window.location.href = '/login.html';
-      }
-    }
-
+    // ================================================================
+    // INICIALIZACIÓN FINAL
+    // ================================================================
     async function init() {
       const { data: { session } } = await sb.auth.getSession();
       if (!session) { window.location.href = '/login.html'; return; }
-      const { data: perfil } = await sb.from('perfiles').select('*').eq('user_id', session.user.id).single();
-      if (perfil) {
-        document.getElementById('donante-nombre').textContent = perfil.nombre_punto || 'Donante';
-        document.getElementById('donante-avatar').textContent = (perfil.nombre_punto || 'DO').substring(0, 2).toUpperCase();
-        document.getElementById('perfil-nombre').value = perfil.nombre_punto || '';
+      const { data: perfilData } = await sb.from('perfiles').select('*').eq('user_id', session.user.id).single();
+      if (perfilData) {
+        document.getElementById('donante-nombre').textContent = perfilData.nombre_punto || 'Donante';
+        document.getElementById('donante-avatar').textContent = (perfilData.nombre_punto || 'DO').substring(0, 2).toUpperCase();
+        document.getElementById('perfil-nombre').value = perfilData.nombre_punto || '';
         document.getElementById('perfil-email').value = session.user.email;
-        document.getElementById('perfil-telefono').value = perfil.telefono || '';
+        document.getElementById('perfil-telefono').value = perfilData.telefono || '';
       }
       await encontrarAcopioCercano();
     }
-
     init();
   </script>
 </body>
