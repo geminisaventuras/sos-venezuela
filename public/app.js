@@ -1,5 +1,10 @@
 ﻿// @build: 2026-06-30.22-30-00 | id: PWA-UTILS-V4 | desc: Utilidades globales + protección anti-bucle de sesión conflictiva + resolución sin recarga
-const API_BASE = '__API_BASE__'
+const API_BASE = (() => {
+  if (location.hostname === 'localhost' || location.hostname.startsWith('192.168.')) {
+    return 'https://192.168.1.152:3000'; // Desarrollo local
+  }
+  return 'https://sos-venezuela-backend.onrender.com'; // Producción
+})();
 let authToken = localStorage.getItem('authToken')
 let perfil = JSON.parse(localStorage.getItem('perfil') || 'null')
 
