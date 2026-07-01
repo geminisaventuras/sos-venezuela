@@ -24,7 +24,8 @@ const app = express()
 const allowedOrigins = [
   'http://localhost:3000',
   'https://192.168.1.152:3000',
-  'https://sos-venezuela-backend.onrender.com'
+  'https://sos-venezuela-backend.onrender.com',
+  'https://sistemasosvenezuela.web.app'
 ]
 
 app.use(cors({
