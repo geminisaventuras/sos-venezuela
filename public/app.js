@@ -1,4 +1,4 @@
-﻿// @build: 2026-06-27.16-00-00 | id: PWA-UTILS | desc: Utilidades globales (sin autenticación)
+﻿// @build: 2026-06-27.16-00-00 | id: PWA-UTILS | desc: Utilidades globales + cierre automático por sesión conflictiva + limpieza de viajeEnCurso
 //const API_BASE = 'https://sos-venezuela-backend.onrender.com'
 const API_BASE = '__API_BASE__'
 let authToken = localStorage.getItem('authToken')
@@ -16,6 +16,7 @@ window.logout = function() {
   perfil = null
   localStorage.removeItem('authToken')
   localStorage.removeItem('perfil')
+  localStorage.removeItem('viajeEnCurso')   // ← Limpiar viaje en curso al cerrar sesión
   window.location.href = '/login.html'
 }
 
@@ -34,6 +35,16 @@ window.apiFetch = async function(path, options = {}) {
     clearTimeout(timeout)
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: { message: 'Error ' + res.status } }))
+
+      // Si la sesión fue usurpada por otro dispositivo, forzar cierre automático
+      if (res.status === 401 && err.error?.code === 'SESSION_CONFLICT') {
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('perfil')
+        localStorage.removeItem('viajeEnCurso')
+        window.location.href = '/login.html'
+        throw new Error('Sesión cerrada automáticamente. Inicie de nuevo.')
+      }
+
       throw new Error(err.error?.message || 'Error del servidor')
     }
     return res.json()

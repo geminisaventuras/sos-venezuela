@@ -5,7 +5,9 @@ const itemSchema = z.object({
   tipo: z.enum(['agua_potable', 'alimentos_no_perecibles', 'medicinas', 'colchonetas', 'ropa', 'otros']),
   cantidad: z.number().positive(),
   unidad: z.string().min(1).max(20),
-  detalle: z.string().max(200).optional()
+  detalle: z.string().max(200).optional(),
+  descripcion: z.string().optional().nullable(),  // ← NUEVO: texto amigable
+  formula: z.object({}).optional().nullable()    // ← NUEVO: datos de la fórmula
 });
 
 const crearDonacionSchema = z.object({

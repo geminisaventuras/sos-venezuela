@@ -65,23 +65,25 @@ class DonacionRepository {
 
     if (errorDonacion) throw new Error(`Error al crear donación: ${errorDonacion.message}`);
 
-    for (const item of items) {
-      let insumoId = item.insumo_id;
-      if (!insumoId || insumoId === 'nuevo' || insumoId === '00000000-0000-0000-0000-000000000000') {
-        insumoId = await catalogoHelper.upsertCatalogo(item.detalle, item.unidad, item.tipo);
-      }
+   for (const item of items) {
+  let insumoId = item.insumo_id;
+  if (!insumoId || insumoId === 'nuevo' || insumoId === '00000000-0000-0000-0000-000000000000') {
+    insumoId = await catalogoHelper.upsertCatalogo(item.detalle, item.unidad, item.tipo);
+  }
 
-      const { error: errorDetalle } = await this.supabase
-        .from('detalle_donacion')
-        .insert({
-          donacion_id: nuevaDonacion.id,
-          insumo_id: insumoId,
-          cantidad: item.cantidad,
-          unidad: item.unidad
-        });
-      
-      if (errorDetalle) throw new Error(`Error al insertar detalle: ${errorDetalle.message}`);
-    }
+  const { error: errorDetalle } = await this.supabase
+    .from('detalle_donacion')
+    .insert({
+      donacion_id: nuevaDonacion.id,
+      insumo_id: insumoId,
+      cantidad: item.cantidad,
+      unidad: item.unidad,
+      detalle: item.descripcion || null,
+      formula: item.formula || null        // ← NUEVO
+    });
+  
+  if (errorDetalle) throw new Error(`Error al insertar detalle: ${errorDetalle.message}`);
+}
 
     return { idempotente: false, id: nuevaDonacion.id };
   }

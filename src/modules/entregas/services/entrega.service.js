@@ -15,6 +15,10 @@ class EntregaService {
   async obtenerEntregas(telefono) {
     return this.repository.findByVoluntario(telefono);
   }
+
+    async registrarIncidencia(entregaId, userId, motivo, descripcion) {
+    return this.repository.registrarIncidencia(entregaId, userId, motivo, descripcion);
+  }
 }
 
 module.exports = EntregaService;

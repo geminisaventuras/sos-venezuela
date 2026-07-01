@@ -1,116 +1,14 @@
-﻿<!-- @build: 2026-07-02.12-00-00 | id: B24-DONANTE-UBICACION-V3 | desc: Dashboard Donante con ubicación inteligente, botón usar ubicación principal, dirección legible en perfil y autocompletado de direcciones venezolanas -->
+﻿<!-- // @build: 2026-06-30.05-10-00 | id: DON-INICIO-V2 | desc: Página de inicio del donante con KPIs y actividad reciente, adaptada del dashboard original -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SOS Venezuela | Donar Ayuda</title>
+  <title>SOS Venezuela | Inicio Donante</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    :root {
-      --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
-      --bg: #f8fafc; --card: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0;
-      --radius: 16px; --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); padding-bottom: 80px; }
-    .header { background: var(--card); padding: 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { font-size: 20px; color: var(--primary); }
-    .header h1 span { color: var(--accent); }
-    .header-actions { display: flex; align-items: center; gap: 12px; }
-    .icon-btn { background: var(--bg); border: 1px solid var(--border); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 16px; cursor: pointer; transition: all 0.2s; }
-    .icon-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
-    .user-info { text-align: right; }
-    .user-info p { font-size: 12px; color: var(--text-muted); }
-    .user-info strong { font-size: 14px; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--success); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; }
-    .container { padding: 20px; max-width: 600px; margin: 0 auto; }
-    .welcome { margin-bottom: 25px; }
-    .welcome h2 { font-size: 24px; margin-bottom: 5px; }
-    .welcome p { color: var(--text-muted); font-size: 14px; }
-    .card { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 20px; }
-    .card-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-    .form-group { margin-bottom: 16px; }
-    label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: var(--text-main); }
-    input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 16px; font-family: inherit; }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-    .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 600; font-size: 16px; cursor: pointer; transition: all 0.2s; }
-    .btn-primary { background: var(--accent); color: white; }
-    .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
-    .btn-success { background: var(--success); color: white; }
-    .btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text-muted); }
-    .btn-outline.active { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
-    .btn-warning { background: var(--warning); color: white; }
-    .btn-danger { background: var(--danger); color: white; }
-    .btn-sm { width: auto; padding: 8px 14px; font-size: 13px; }
-    .radio-group { display: flex; gap: 10px; margin-bottom: 20px; }
-    .radio-group .btn { flex: 1; }
-    .mensaje { padding: 12px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; display: none; }
-    .mensaje.exito { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-    .mensaje.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-    .timeline { position: relative; padding-left: 30px; }
-    .timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: var(--border); }
-    .timeline-item { position: relative; margin-bottom: 20px; }
-    .timeline-item::before { content: ''; position: absolute; left: -24px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid white; box-shadow: 0 0 0 2px var(--accent); }
-    .timeline-item.completed::before { background: var(--success); box-shadow: 0 0 0 2px var(--success); }
-    .timeline-item.pending::before { background: var(--warning); box-shadow: 0 0 0 2px var(--warning); }
-    .timeline-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-    .timeline-desc { font-size: 12px; color: var(--text-muted); }
-    .timeline-date { font-size: 11px; color: #94a3b8; margin-top: 4px; }
-    .acopio-sugerido { background: #eff6ff; border: 2px solid var(--accent); border-radius: 10px; padding: 15px; margin-bottom: 20px; }
-    .acopio-sugerido h4 { color: var(--accent); font-size: 14px; margin-bottom: 8px; }
-    .acopio-sugerido p { font-size: 13px; color: var(--text-muted); margin: 4px 0; }
-    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-    .stat-box { background: var(--card); padding: 15px; border-radius: var(--radius); text-align: center; border: 1px solid var(--border); }
-    .stat-number { font-size: 28px; font-weight: 700; color: var(--accent); margin-bottom: 5px; }
-    .stat-label { font-size: 12px; color: var(--text-muted); }
-    .donation-item { background: var(--card); border-radius: var(--radius); padding: 15px; margin-bottom: 15px; border: 1px solid var(--border); }
-    .donation-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .donation-title { font-weight: 600; font-size: 15px; }
-    .donation-status { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
-    .status-pendiente { background: #fef3c7; color: #92400e; }
-    .status-recibida { background: #d1fae5; color: #065f46; }
-    .status-distribuida { background: #dbeafe; color: #1e40af; }
-    .status-cancelada { background: #fee2e2; color: #991b1b; }
-    .donation-detail { font-size: 13px; color: var(--text-muted); margin: 5px 0; }
-    .action-buttons { display: flex; gap: 8px; margin-top: 10px; }
-    .action-buttons .btn { flex: 1; }
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; }
-    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); text-decoration: none; font-size: 10px; font-weight: 500; padding: 5px 15px; border-radius: 8px; background: none; border: none; cursor: pointer; }
-    .nav-item i { font-size: 20px; }
-    .nav-item.active { color: var(--accent); }
-    .section { display: none; }
-    .section.active { display: block; }
-    .search-box { position: relative; }
-    .search-results { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-radius: 10px; max-height: 200px; overflow-y: auto; z-index: 10; box-shadow: var(--shadow); display: none; }
-    .search-result-item { padding: 12px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 14px; }
-    .search-result-item:hover { background: var(--bg); }
-    .loading { text-align: center; padding: 20px; color: var(--text-muted); }
-    #mapa-recogida { height: 200px; margin-top: 10px; border-radius: 10px; display: none; }
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
-    .modal-overlay.active { display: flex; }
-    .modal { background: white; border-radius: var(--radius); padding: 20px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto; }
-    .modal h3 { font-size: 18px; margin-bottom: 16px; }
-    .carrito-container { background: #f9fafb; border: 2px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 16px; }
-    .carrito-container h3 { font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-    .carrito-item { background: white; padding: 12px; border-radius: 10px; margin-bottom: 8px; border-left: 4px solid var(--accent); display: flex; justify-content: space-between; align-items: center; }
-    .carrito-item-info { flex: 1; }
-    .carrito-item-info strong { font-size: 14px; display: block; }
-    .carrito-item-info span { font-size: 12px; color: var(--text-muted); }
-    .carrito-item-actions { display: flex; gap: 6px; }
-    .paginacion { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px; }
-    .paginacion button { width: auto; padding: 10px 20px; }
-    .paginacion span { font-size: 14px; color: var(--text-muted); }
-    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-    .checkbox-row input[type="checkbox"] { width: auto; margin: 0; }
-    .checkbox-row label { margin: 0; font-weight: 500; font-size: 13px; }
-    .aviso-ubicacion { background: #fff3e0; border: 2px solid #f59e0b; border-radius: 10px; padding: 12px 15px; margin-bottom: 16px; font-size: 13px; display: none; align-items: center; gap: 10px; }
-    .aviso-ubicacion i { font-size: 20px; color: #f59e0b; }
-    .aviso-ubicacion .btn { width: auto; padding: 6px 12px; font-size: 12px; }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="header">
@@ -119,7 +17,7 @@
       <button class="icon-btn" onclick="actualizarUbicacionGPS()" title="Actualizar mi ubicación">
         <i class="fa-solid fa-location-crosshairs"></i>
       </button>
-      <button class="icon-btn" onclick="logout()" title="Cerrar sesión">
+      <button class="icon-btn" onclick="cerrarSesion()" title="Cerrar sesión">
         <i class="fa-solid fa-right-from-bracket"></i>
       </button>
       <div class="user-info">
@@ -133,695 +31,83 @@
   <div class="container">
     <div id="mensaje" class="mensaje"></div>
 
-    <!-- SECCIÓN NUEVA DONACIÓN -->
-    <div class="section active" id="section-nueva">
-      <div class="welcome">
-        <h2>Registrar Donación</h2>
-        <p>Agrega todos los productos que deseas donar</p>
+    <div class="welcome">
+      <h2>Mi Panel</h2>
+      <p>Resumen de tu impacto humanitario</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#eff6ff;color:var(--accent);"><i class="fa-solid fa-box-open"></i></div>
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-label">Total Donadas</div>
       </div>
-
-      <div class="card">
-        <div class="card-title"><i class="fa-solid fa-box-open" style="color: var(--accent);"></i> Agregar producto al carrito</div>
-        <div id="contenedor-buscador-donante"></div>
-      </div>
-
-      <!-- CARRITO -->
-      <div class="carrito-container" id="carrito" style="display:none;">
-        <h3>🛒 Productos a donar <span id="contador-carrito" style="background:var(--danger);color:white;border-radius:50%;padding:2px 10px;font-size:12px;">0</span></h3>
-        <div id="lista-carrito"></div>
-        <button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="vaciarCarrito()">🗑️ Vaciar carrito</button>
-      </div>
-
-      <!-- DATOS DE ENTREGA -->
-      <div class="card" id="card-entrega" style="display:none;">
-        <h2>📦 Datos de entrega</h2>
-        
-        <!-- AVISO DE CAMBIO DE UBICACIÓN -->
-        <div class="aviso-ubicacion" id="aviso-cambio-ubicacion">
-          <i class="fa-solid fa-location-dot"></i>
-          <span id="texto-cambio-ubicacion"></span>
-          <button class="btn btn-outline btn-sm" onclick="usarUbicacionActual()" style="margin-left:auto;">Usar actual</button>
-        </div>
-
-        <div class="form-group">
-          <label>¿Cómo entregarás la donación?</label>
-          <div class="radio-group">
-            <button type="button" class="btn btn-outline active" id="btn-propia" onclick="setModoEntrega('propia')">
-              <i class="fa-solid fa-car"></i> Yo lo llevo
-            </button>
-            <button type="button" class="btn btn-outline" id="btn-recogida" onclick="setModoEntrega('recogida')">
-              <i class="fa-solid fa-truck"></i> Necesito recogida
-            </button>
-          </div>
-        </div>
-
-        <div id="direccion-recogida-group" class="form-group" style="display: none;">
-          <label for="direccion">Dirección de recogida</label>
-          <div class="search-box">
-            <input type="text" id="direccion" placeholder="Calle, urbanización, referencia" autocomplete="off">
-            <div class="search-results" id="resultados-direccion"></div>
-          </div>
-          <button type="button" class="btn btn-outline" style="margin-top: 10px;" onclick="obtenerUbicacionGPS()">
-            <i class="fa-solid fa-location-crosshairs"></i> Usar mi ubicación actual
-          </button>
-          <button type="button" class="btn btn-outline" style="margin-top: 8px; display: none;" id="btn-usar-ubicacion-principal" onclick="usarUbicacionPrincipalRecogida()">
-            📍 Usar mi ubicación principal
-          </button>
-          <div class="checkbox-row">
-            <input type="checkbox" id="guardar-ubicacion-principal">
-            <label for="guardar-ubicacion-principal">💾 Guardar como mi ubicación principal</label>
-          </div>
-          <div id="mapa-recogida"></div>
-          <input type="hidden" id="lat-recogida">
-          <input type="hidden" id="lon-recogida">
-        </div>
-
-        <div class="form-group">
-          <label>Centro de Acopio sugerido</label>
-          <div class="acopio-sugerido" id="acopio-sugerido">
-            <h4><i class="fa-solid fa-location-dot"></i> <span id="acopio-nombre">Cargando...</span></h4>
-            <p id="acopio-distancia"></p>
-          </div>
-          <input type="hidden" id="acopio-id">
-        </div>
-
-        <button type="button" class="btn btn-primary" id="btn-submit" onclick="enviarDonacion()">
-          ❤️ Registrar Donación
-        </button>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#ecfdf5;color:var(--success);"><i class="fa-solid fa-people-group"></i></div>
+        <div class="stat-value" id="stat-impacto">0</div>
+        <div class="stat-label">Ítems Donados</div>
       </div>
     </div>
 
-    <!-- SECCIÓN MIS DONACIONES -->
-    <div class="section" id="section-mis-donaciones">
-      <div class="welcome">
-        <h2>Mis Donaciones</h2>
-        <p>Historial y trazabilidad de tu ayuda</p>
-      </div>
-      <div class="form-group" style="margin-bottom:15px;">
-        <select id="filtro-estado" onchange="filtrarDonaciones(this.value)" style="width:100%;">
-          <option value="activas">🟢 Activas</option>
-          <option value="completadas">✅ Completadas</option>
-          <option value="canceladas">❌ Canceladas</option>
-          <option value="todas">📋 Todas</option>
-        </select>
-      </div>
-      <div class="stats-grid">
-        <div class="stat-box"><div class="stat-number" id="stat-total">0</div><div class="stat-label">Total Donadas</div></div>
-        <div class="stat-box"><div class="stat-number" id="stat-impacto">0</div><div class="stat-label">Personas Impactadas</div></div>
-      </div>
-      <div id="lista-donaciones"><div class="loading">Cargando historial...</div></div>
-      <div class="paginacion" id="paginacion" style="display:none;"></div>
-    </div>
-
-    <!-- SECCIÓN PERFIL -->
-    <div class="section" id="section-perfil">
-      <div class="welcome"><h2>Mi Perfil</h2><p>Tus datos de contacto</p></div>
-      <div class="card">
-        <div class="form-group"><label>Nombre</label><input type="text" id="perfil-nombre" readonly></div>
-        <div class="form-group"><label>Correo electrónico</label><input type="email" id="perfil-email" readonly></div>
-        <div class="form-group"><label>Teléfono</label><input type="tel" id="perfil-telefono" readonly></div>
-        <div class="form-group"><label>📍 Ubicación principal</label><input type="text" id="perfil-ubicacion" readonly placeholder="No configurada"></div>
-        <button class="btn btn-success" onclick="logout()" style="margin-top:20px;"><i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</button>
-      </div>
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent);"></i> Actividad Reciente</div>
+      <div id="actividad-reciente"><div class="loading">Cargando...</div></div>
     </div>
   </div>
 
-  <!-- MODALES -->
-  <div class="modal-overlay" id="modal-modificar">
-    <div class="modal">
-      <h3>✏️ Modificar Donación</h3>
-      <div class="form-group"><label for="mod-detalle">Insumo</label><input type="text" id="mod-detalle" placeholder="Nombre del insumo"></div>
-      <div class="form-group"><label for="mod-cantidad">Cantidad</label><input type="number" id="mod-cantidad" min="1" placeholder="Nueva cantidad"></div>
-      <div class="form-group"><label for="mod-unidad">Unidad</label><input type="text" id="mod-unidad" placeholder="unidades, kg, litros..."></div>
-      <button class="btn btn-primary" id="btn-confirmar-modificar"><i class="fa-solid fa-save"></i> Guardar cambios</button>
-      <button class="btn btn-danger" style="margin-top:8px;" onclick="cerrarModalModificar()">Cancelar</button>
-    </div>
-  </div>
-  <div class="modal-overlay" id="modal-modificar-carrito">
-    <div class="modal">
-      <h3>✏️ Modificar producto del carrito</h3>
-      <div id="modal-modificar-contenido"></div>
-      <button class="btn btn-primary" onclick="guardarModificacionCarrito()">💾 Guardar</button>
-      <button class="btn btn-danger" style="margin-top:8px;" onclick="cerrarModalModificarCarrito()">Cancelar</button>
-    </div>
-  </div>
-
-  <!-- NAVEGACIÓN INFERIOR -->
-  <nav class="bottom-nav">
-    <button class="nav-item active" onclick="cambiarSeccion('nueva')" data-section="nueva"><i class="fa-solid fa-plus-circle"></i><span>Nueva</span></button>
-    <button class="nav-item" onclick="cambiarSeccion('mis-donaciones')" data-section="mis-donaciones"><i class="fa-solid fa-list"></i><span>Historial</span></button>
-    <button class="nav-item" onclick="cambiarSeccion('perfil')" data-section="perfil"><i class="fa-solid fa-user"></i><span>Perfil</span></button>
-  </nav>
+  <nav id="bottom-nav-donante"></nav>
 
   <script src="app.js"></script>
   <script src="componentes/mensaje.js"></script>
-  <script src="componentes/carrito.js"></script>
-  <script src="componentes/buscador-insumos.js"></script>
-  <script src="componentes/utilidades.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="componentes/bottom-nav.js"></script>
   <script>
-    // ================================================================
-    // INICIALIZACIÓN
-    // ================================================================
-    const sb = supabase.createClient('https://kxqwxiolouhrwddaqynp.supabase.co', 'sb_publishable_iJt58cRTDAYH_j_Mv1bJ4g_g0HdRlBF');
-    let modoEntrega = 'propia', mapaRecogida = null, markerRecogida = null;
-    let donacionSeleccionada = null;
-    let itemEditando = null;
-    let filtroEstado = 'activas';
-    let paginaActual = 1;
-    const ITEMS_POR_PAGINA = 5;
-    let ubicacionPrincipal = null;
-    let usandoUbicacionActual = false;
+    if (!verificarSesion(['donante'])) throw new Error('Acceso denegado');
+BottomNav.init({ contenedorId: 'bottom-nav-donante' });    document.getElementById('donante-nombre').textContent = perfil.nombre_punto || 'Donante';
+    document.getElementById('donante-avatar').textContent = (perfil.nombre_punto || 'DO').substring(0, 2).toUpperCase();
 
-    // Componentes
-    Mensaje.init('mensaje');
-
-    CarritoInsumos.init({
-      contenedorId: 'carrito',
-      modo: 'donacion',
-      onChange: function(items, evento) {
-        const cardEntrega = document.getElementById('card-entrega');
-        if (items.length === 0) {
-          cardEntrega.style.display = 'none';
-        } else {
-          cardEntrega.style.display = 'block';
-        }
-        if (evento && evento.accion === 'editar') { editarItemCarrito(evento.index); }
-      }
-    });
-
-    BuscadorInsumos.init('contenedor-buscador-donante', {
-      onAgregar: function(itemData) {
-        CarritoInsumos.agregar({
-          id: itemData.id,
-          nombre: itemData.nombre,
-          cantidad: itemData.cantidad * (itemData.unidades_empaque || 1),
-          unidad: itemData.categoria === 'alimentos' ? 'kg' : (itemData.categoria === 'agua' ? 'litros' : 'unidades'),
-          categoria: itemData.categoria,
-          extra: { ...itemData.extra }
-        });
-      }
-    });
-
-    // ================================================================
-    // LÓGICA DE UBICACIÓN INTELIGENTE
-    // ================================================================
-    function calcularDistanciaKM(lat1, lon1, lat2, lon2) {
-      const R = 6371;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
-    async function obtenerUbicacionGPS() {
-      if (!navigator.geolocation) return alert('GPS no disponible');
-      const b = document.querySelector('#direccion-recogida-group .btn-outline');
-      b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Obteniendo...';
-      b.disabled = true;
-      navigator.geolocation.getCurrentPosition(async p => {
-        const { latitude, longitude } = p.coords;
-        document.getElementById('lat-recogida').value = latitude;
-        document.getElementById('lon-recogida').value = longitude;
-        if (!mapaRecogida) initMapa();
-        mapaRecogida.setView([latitude, longitude], 15);
-        colocarMarker(latitude, longitude);
-        await geocodificarInversa(latitude, longitude);
-        b.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Usar mi ubicación actual';
-        b.disabled = false;
-        if (document.getElementById('guardar-ubicacion-principal')?.checked) {
-          await guardarUbicacionPrincipal(latitude, longitude);
-        }
-      }, () => {
-        alert('No se pudo obtener ubicación');
-        b.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Usar mi ubicación actual';
-        b.disabled = false;
-      }, { enableHighAccuracy: true, timeout: 10000 });
-    }
-
-    function usarUbicacionPrincipalRecogida() {
-      if (!ubicacionPrincipal && (!perfil.lat || !perfil.lon)) return;
-      const lat = ubicacionPrincipal?.lat || perfil.lat;
-      const lon = ubicacionPrincipal?.lon || perfil.lon;
-      const direccion = ubicacionPrincipal?.direccion || perfil.direccion_exacta || '';
-      
-      document.getElementById('lat-recogida').value = lat;
-      document.getElementById('lon-recogida').value = lon;
-      document.getElementById('direccion').value = direccion;
-      
-      if (mapaRecogida) {
-        mapaRecogida.setView([lat, lon], 15);
-        colocarMarker(lat, lon);
-      }
-    }
-
-    async function guardarUbicacionPrincipal(lat, lon) {
+    async function cargarActividad() {
+      const div = document.getElementById('actividad-reciente');
       try {
-        let direccion = null;
-        try {
-          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-          const d = await r.json();
-          direccion = d?.display_name || null;
-        } catch (geoErr) {}
-
-        await apiFetch('/api/perfil', {
-          method: 'POST',
-          body: JSON.stringify({
-            rol: perfil.rol,
-            nombre: perfil.nombre_punto || perfil.nombre,
-            telefono: perfil.telefono || '',
-            lat,
-            lon,
-            direccion_exacta: direccion
-          })
-        });
-        ubicacionPrincipal = { lat, lon, direccion };
-        perfil.lat = lat;
-        perfil.lon = lon;
-        perfil.direccion_exacta = direccion;
-        document.getElementById('btn-usar-ubicacion-principal').style.display = 'block';
-        Mensaje.mostrar('📍 Ubicación principal guardada', 'exito');
-      } catch (e) { Mensaje.mostrar('❌ Error al guardar ubicación', 'error'); }
-    }
-
-    async function usarUbicacionActual() {
-      if (!navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition(async p => {
-        document.getElementById('aviso-cambio-ubicacion').style.display = 'none';
-        usandoUbicacionActual = true;
-        const lat = p.coords.latitude;
-        const lon = p.coords.longitude;
-        document.getElementById('lat-recogida').value = lat;
-        document.getElementById('lon-recogida').value = lon;
-        if (mapaRecogida) {
-          mapaRecogida.setView([lat, lon], 15);
-          colocarMarker(lat, lon);
-        }
-        await encontrarAcopioCercanoConCoordenadas(lat, lon);
-      });
-    }
-
-    // ================================================================
-    // AUTOCOMPLETADO DE DIRECCIONES VENEZOLANAS
-    // ================================================================
-    function setupAutocompletadoDireccion() {
-      const input = document.getElementById('direccion');
-      const resultadosDiv = document.getElementById('resultados-direccion');
-      let debounceTimer;
-
-      input.addEventListener('input', function() {
-        clearTimeout(debounceTimer);
-        const texto = this.value.trim();
-        
-        if (texto.length < 3) {
-          resultadosDiv.innerHTML = '';
-          resultadosDiv.style.display = 'none';
+        const res = await apiFetch('/api/donaciones/historial');
+        const donaciones = res.data || [];
+        const activas = donaciones.filter(d => d.estado !== 'cancelada');
+        document.getElementById('stat-total').textContent = activas.length;
+        document.getElementById('stat-impacto').textContent = activas.reduce((s, d) => s + (d.detalle_donacion?.reduce((ss, dd) => ss + dd.cantidad, 0) || 0), 0);
+        if (donaciones.length === 0) {
+          div.innerHTML = '<div class="empty-state"><i class="fa-solid fa-box-open" style="font-size:48px;opacity:0.3;"></i><p style="margin-top:15px;">Aún no has realizado donaciones</p></div>';
           return;
         }
-
-        debounceTimer = setTimeout(async () => {
-          try {
-            const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(texto) + '&countrycodes=ve');
-            const data = await res.json();
-            
-            if (!data || data.length === 0) {
-              resultadosDiv.innerHTML = '<div class="search-result-item" style="color:var(--text-muted);">No se encontraron direcciones</div>';
-              resultadosDiv.style.display = 'block';
-              return;
-            }
-
-            resultadosDiv.innerHTML = data.map(item => `
-              <div class="search-result-item" onclick="seleccionarDireccion('${item.lat}', '${item.lon}', '${item.display_name.replace(/'/g, "\\'")}')">
-                ${item.display_name}
-              </div>
-            `).join('');
-            resultadosDiv.style.display = 'block';
-          } catch {
-            resultadosDiv.innerHTML = '';
-            resultadosDiv.style.display = 'none';
-          }
-        }, 300);
-      });
-
-      // Cerrar al hacer clic fuera
-      document.addEventListener('click', function(e) {
-        if (!e.target.closest('#direccion-recogida-group')) {
-          resultadosDiv.innerHTML = '';
-          resultadosDiv.style.display = 'none';
-        }
-      });
-    }
-
-    window.seleccionarDireccion = function(lat, lon, displayName) {
-      document.getElementById('direccion').value = displayName;
-      document.getElementById('lat-recogida').value = parseFloat(lat).toFixed(6);
-      document.getElementById('lon-recogida').value = parseFloat(lon).toFixed(6);
-      document.getElementById('resultados-direccion').innerHTML = '';
-      document.getElementById('resultados-direccion').style.display = 'none';
-      
-      if (mapaRecogida) {
-        mapaRecogida.setView([parseFloat(lat), parseFloat(lon)], 15);
-        colocarMarker(parseFloat(lat), parseFloat(lon));
-      }
-    };
-
-    // ================================================================
-    // EDICIÓN DE ÍTEMS DEL CARRITO
-    // ================================================================
-    function editarItemCarrito(index) {
-      const items = CarritoInsumos.obtenerItems();
-      if (!items[index]) return;
-      itemEditando = index;
-      const item = items[index];
-      document.getElementById('modal-modificar-contenido').innerHTML = `
-        <div class="form-group"><label>Insumo</label><input type="text" id="mod-nombre-carrito" value="${item.nombre}" readonly></div>
-        <div class="form-group"><label>Cantidad</label><input type="number" id="mod-cantidad-carrito" value="${item.cantidad}" min="1"></div>
-        <div class="form-group"><label>Unidad</label><input type="text" id="mod-unidad-carrito" value="${item.unidad}"></div>
-      `;
-      document.getElementById('modal-modificar-carrito').classList.add('active');
-    }
-    function guardarModificacionCarrito() {
-      if (itemEditando === null) return;
-      CarritoInsumos.actualizarItem(itemEditando, {
-        cantidad: parseInt(document.getElementById('mod-cantidad-carrito').value) || 1,
-        unidad: document.getElementById('mod-unidad-carrito').value.trim() || 'unidades'
-      });
-      document.getElementById('modal-modificar-carrito').classList.remove('active');
-      itemEditando = null;
-    }
-    function cerrarModalModificarCarrito() { document.getElementById('modal-modificar-carrito').classList.remove('active'); itemEditando = null; }
-
-    // ================================================================
-    // MODO ENTREGA Y MAPA GPS
-    // ================================================================
-    function setModoEntrega(modo) {
-      modoEntrega = modo;
-      document.getElementById('btn-propia').classList.toggle('active', modo === 'propia');
-      document.getElementById('btn-recogida').classList.toggle('active', modo === 'recogida');
-      document.getElementById('direccion-recogida-group').style.display = modo === 'recogida' ? 'block' : 'none';
-      if (modo === 'recogida') {
-        document.getElementById('mapa-recogida').style.display = 'block';
-        if (!mapaRecogida) initMapa(); else setTimeout(() => mapaRecogida.invalidateSize(), 100);
-      } else {
-        document.getElementById('mapa-recogida').style.display = 'none';
-      }
-    }
-
-    function initMapa() {
-      const coords = ubicacionPrincipal || { lat: perfil.lat || 10.48, lon: perfil.lon || -66.90 };
-      mapaRecogida = L.map('mapa-recogida').setView([coords.lat, coords.lon], 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(mapaRecogida);
-      mapaRecogida.on('click', e => { colocarMarker(e.latlng.lat, e.latlng.lng); geocodificarInversa(e.latlng.lat, e.latlng.lng); });
-    }
-
-    function colocarMarker(lat, lon) {
-      if (markerRecogida) mapaRecogida.removeLayer(markerRecogida);
-      markerRecogida = L.marker([lat, lon], { draggable: true }).addTo(mapaRecogida);
-      markerRecogida.on('dragend', () => {
-        const p = markerRecogida.getLatLng();
-        document.getElementById('lat-recogida').value = p.lat.toFixed(6);
-        document.getElementById('lon-recogida').value = p.lng.toFixed(6);
-        geocodificarInversa(p.lat, p.lng);
-      });
-      document.getElementById('lat-recogida').value = lat.toFixed(6);
-      document.getElementById('lon-recogida').value = lon.toFixed(6);
-    }
-
-    async function geocodificarInversa(lat, lon) {
-      try {
-        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-        const d = await r.json();
-        if (d?.display_name) document.getElementById('direccion').value = d.display_name;
-      } catch {}
-    }
-
-    // ================================================================
-    // ACOPIO CERCANO
-    // ================================================================
-    async function encontrarAcopioCercanoConCoordenadas(lat, lon) {
-      try {
-        const res = await apiFetch(`/api/perfil/acopios-cercanos?lat=${lat}&lon=${lon}&radio=50`);
-        const a = res.data || [];
-        const div = document.getElementById('acopio-sugerido');
-
-        if (a?.length) {
-          const p = a[0];
-          const distanciaTexto = p.distancia ? `${p.distancia} km` : (p.estado || 'Venezuela');
-          
-          div.innerHTML = `
-            <h4><i class="fa-solid fa-location-dot"></i> <span id="acopio-nombre">${p.nombre_punto || 'Centro de Acopio'}</span></h4>
-            <p id="acopio-distancia">${distanciaTexto}</p>
-          `;
-          document.getElementById('acopio-id').value = p.user_id;
-
-          if (a.length > 1) {
-            let s = '<select id="selector-acopios" style="width:100%;padding:8px;margin-top:8px;border-radius:8px;border:1px solid var(--border);">';
-            a.forEach(x => {
-              const dist = x.distancia ? `(${x.distancia} km)` : '';
-              s += `<option value="${x.user_id}">${x.nombre_punto || 'Acopio'} ${dist}</option>`;
-            });
-            s += '</select>';
-            div.innerHTML += s;
-            document.getElementById('selector-acopios').addEventListener('change', function() {
-              document.getElementById('acopio-id').value = this.value;
-              document.getElementById('acopio-nombre').textContent = a.find(x => x.user_id === this.value)?.nombre_punto || 'Acopio';
-            });
-          }
-        } else {
-          div.innerHTML = `
-            <h4><i class="fa-solid fa-location-dot"></i> <span id="acopio-nombre">No hay acopios disponibles</span></h4>
-            <p id="acopio-distancia"></p>
-          `;
-        }
-      } catch {}
-    }
-
-    async function encontrarAcopioCercano() {
-      const lat = perfil.lat || ubicacionPrincipal?.lat;
-      const lon = perfil.lon || ubicacionPrincipal?.lon;
-      if (lat && lon) {
-        await encontrarAcopioCercanoConCoordenadas(lat, lon);
-      } else {
-        document.getElementById('acopio-nombre').textContent = 'Actualice su ubicación';
-        document.getElementById('acopio-distancia').textContent = '';
-      }
-    }
-
-    // ================================================================
-    // UTILIDADES
-    // ================================================================
-    function cambiarSeccion(s) {
-      document.querySelectorAll('.section').forEach(e => e.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
-      document.getElementById('section-' + s).classList.add('active');
-      document.querySelector(`.nav-item[data-section="${s}"]`).classList.add('active');
-      if (s === 'mis-donaciones') cargarMisDonaciones();
+        const recientes = donaciones.slice(0, 5);
+        div.innerHTML = recientes.map(d => {
+          const productos = d.detalle_donacion?.map(det => {
+            const insumo = det.catalogo_items?.nombre_generico || det.detalle || 'Insumo';
+            return `${det.cantidad} ${det.unidad || 'unid.'} ${insumo}`;
+          }).join(', ') || 'Sin productos';
+          const estadoClass = d.estado === 'recibida' || d.estado === 'distribuida' || d.estado === 'entregada' ? 'badge-recibida' : d.estado === 'cancelada' || d.estado === 'totalmente_rechazada' ? 'badge-cancelada' : d.estado === 'asignada' || d.estado === 'en_transito_a_acopio' ? 'badge-en_transito' : 'badge-ofrecida';
+          return `<div class="donacion-item">
+            <div class="donacion-header"><div class="donacion-title">${productos}</div><span class="badge ${estadoClass}">${d.estado.replace(/_/g, ' ')}</span></div>
+            <div class="donacion-detail">Acopio: ${d.acopio_destino?.nombre_punto || 'Asignado'}</div>
+            <div class="donacion-detail">Fecha: ${new Date(d.creado_en).toLocaleDateString('es-VE')}</div>
+          </div>`;
+        }).join('');
+      } catch { div.innerHTML = '<div class="empty-state"><p style="color:var(--danger);">Error al cargar actividad</p></div>'; }
     }
 
     async function actualizarUbicacionGPS() {
       if (!navigator.geolocation) { Mensaje.mostrar('GPS no soportado', 'error'); return; }
       navigator.geolocation.getCurrentPosition(async pos => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
+        const lat = pos.coords.latitude, lon = pos.coords.longitude;
         try {
           await apiFetch('/api/perfil', { method: 'POST', body: JSON.stringify({ rol: perfil.rol, nombre: perfil.nombre_punto || perfil.nombre, telefono: perfil.telefono || '', lat, lon }) });
           perfil.lat = lat; perfil.lon = lon;
-          ubicacionPrincipal = { lat, lon };
           Mensaje.mostrar('📍 Ubicación actualizada', 'exito');
         } catch (e) { Mensaje.mostrar('❌ Error', 'error'); }
       }, () => { Mensaje.mostrar('No se pudo obtener ubicación', 'error'); }, { enableHighAccuracy: true, timeout: 10000 });
     }
 
-    async function logout() {
-      if (confirm('¿Cerrar sesión?')) {
-        await sb.auth.signOut();
-        localStorage.removeItem('authToken'); localStorage.removeItem('perfil');
-        window.location.href = '/login.html';
-      }
-    }
+    function cerrarSesion() { if (confirm('¿Cerrar sesión?')) { logout(); } }
 
-    // ================================================================
-    // ENVIAR DONACIÓN
-    // ================================================================
-    async function enviarDonacion() {
-      const items = CarritoInsumos.obtenerItems();
-      if (items.length === 0) { Mensaje.mostrar('Agregue al menos un producto', 'error'); return; }
-      if (modoEntrega === 'recogida' && !document.getElementById('direccion').value) { Mensaje.mostrar('Ingrese la dirección de recogida', 'error'); return; }
-      const btn = document.getElementById('btn-submit');
-      btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
-      try {
-        const body = {
-          idempotencyKey: crypto.randomUUID(),
-          centro_acopio: { nombre: document.getElementById('acopio-nombre').textContent, lat: 10.4806, lon: -66.9036 },
-          items: items.map(item => {
-            let detalle = item.nombre;
-            if (item.extra?.dosis) detalle += ' ' + item.extra.dosis;
-            else if (item.extra?.volumen) detalle += ' ' + item.extra.volumen;
-            else if (item.extra?.peso) detalle += ' ' + item.extra.peso;
-            return { tipo: item.categoria || 'otros', detalle, cantidad: item.cantidad, unidad: item.unidad, ...item.extra };
-          }),
-          donante: perfil.nombre_punto || 'Donante'
-        };
-        if (modoEntrega === 'recogida') {
-          body.modo_entrega = 'recogida';
-          body.direccion_recogida = document.getElementById('direccion').value;
-          body.lat_recogida = document.getElementById('lat-recogida').value || null;
-          body.lon_recogida = document.getElementById('lon-recogida').value || null;
-        }
-        const res = await apiFetch('/api/donaciones', { method: 'POST', body: JSON.stringify(body) });
-        Mensaje.mostrar('✅ Donación registrada. ID: ' + res.data.id, 'exito');
-        document.getElementById('direccion').value = '';
-        CarritoInsumos.vaciar(true);
-      } catch (err) { Mensaje.mostrar('❌ ' + err.message, 'error'); }
-      finally { btn.disabled = false; btn.innerHTML = '❤️ Registrar Donación'; }
-    }
-
-    // ================================================================
-    // FILTRO Y PAGINACIÓN
-    // ================================================================
-    function filtrarDonaciones(estado) { filtroEstado = estado; paginaActual = 1; cargarMisDonaciones(); }
-    function cambiarPagina(direccion) { paginaActual += direccion; cargarMisDonaciones(); }
-
-    // ================================================================
-    // HISTORIAL DE DONACIONES
-    // ================================================================
-    async function cargarMisDonaciones() {
-      const lista = document.getElementById('lista-donaciones');
-      lista.innerHTML = '<div class="loading">Cargando...</div>';
-      try {
-        const res = await apiFetch('/api/donaciones/historial');
-        const donaciones = res.data || [];
-        let donacionesFiltradas = donaciones;
-        if (filtroEstado === 'activas') {
-          donacionesFiltradas = donaciones.filter(d => ['ofrecida', 'asignada', 'en_transito_a_acopio'].includes(d.estado));
-          if (donacionesFiltradas.length === 0) {
-            filtroEstado = 'completadas';
-            document.getElementById('filtro-estado').value = 'completadas';
-            donacionesFiltradas = donaciones.filter(d => ['recibida', 'cancelada', 'totalmente_rechazada'].includes(d.estado));
-          }
-        } else if (filtroEstado === 'completadas') {
-          donacionesFiltradas = donaciones.filter(d => ['recibida', 'totalmente_rechazada'].includes(d.estado));
-        } else if (filtroEstado === 'canceladas') {
-          donacionesFiltradas = donaciones.filter(d => ['cancelada'].includes(d.estado));
-        }
-
-        if (!donacionesFiltradas?.length) {
-          lista.innerHTML = '<div class="card" style="padding:40px;text-align:center;"><i class="fa-solid fa-box-open" style="font-size:48px;color:var(--text-muted);margin-bottom:15px;opacity:0.3;"></i><p style="color:var(--text-muted);">' + (filtroEstado === 'activas' ? 'No tienes donaciones activas' : (filtroEstado === 'completadas' ? 'No tienes donaciones completadas' : (filtroEstado === 'canceladas' ? 'No tienes donaciones canceladas' : 'Aún no has realizado donaciones'))) + '</p></div>';
-          document.getElementById('paginacion').style.display = 'none';
-          return;
-        }
-        const totalPaginas = Math.ceil(donacionesFiltradas.length / ITEMS_POR_PAGINA);
-        if (paginaActual > totalPaginas) paginaActual = totalPaginas;
-        if (paginaActual < 1) paginaActual = 1;
-        const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
-        const paginaDonaciones = donacionesFiltradas.slice(inicio, inicio + ITEMS_POR_PAGINA);
-        const activas = donaciones.filter(d => d.estado !== 'cancelada');
-        document.getElementById('stat-total').textContent = activas.length;
-        document.getElementById('stat-impacto').textContent = activas.reduce((s, d) => s + (d.detalle_donacion?.reduce((ss, dd) => ss + dd.cantidad, 0) || 0), 0);
-        lista.innerHTML = paginaDonaciones.map(d => {
-          const primerDetalle = d.detalle_donacion?.[0];
-          const insumoNombre = UIHarden.escape(primerDetalle?.catalogo_items?.nombre_generico || primerDetalle?.detalle?.replace(/^\d+\s+\w+\s+de\s+/, '') || 'Insumo');
-          const productos = d.detalle_donacion?.map(det => {
-            const insumo = UIHarden.escape(det.detalle || det.catalogo_items?.nombre_generico || insumoNombre);
-            return `${det.cantidad} ${det.unidad || 'unidades'} de ${insumo}`;
-          }).join(', ') || 'Sin productos';
-          const estadoClass = d.estado === 'recibida' ? 'status-recibida' : d.estado === 'distribuida' ? 'status-distribuida' : d.estado === 'cancelada' ? 'status-cancelada' : 'status-pendiente';
-          let tl = `<div class="timeline" style="margin-top:15px;padding-top:15px;border-top:1px solid var(--border);"><div class="timeline-item completed"><div class="timeline-title">Donación registrada</div><div class="timeline-date">${new Date(d.creado_en).toLocaleString('es-VE')}</div></div>`;
-          if (d.estado === 'asignada' || d.estado === 'en_transito_a_acopio' || d.estado === 'recibida' || d.estado === 'distribuida') tl += `<div class="timeline-item completed"><div class="timeline-title">Transportista asignado</div><div class="timeline-date">${d.voluntario_recoleccion_id ? 'Asignado' : 'Pendiente'}</div></div>`;
-          if (d.estado === 'en_transito_a_acopio' || d.estado === 'recibida' || d.estado === 'distribuida') tl += `<div class="timeline-item completed"><div class="timeline-title">Recogida confirmada</div><div class="timeline-date">${d.fecha_recibida ? new Date(d.fecha_recibida).toLocaleString('es-VE') : 'En proceso'}</div></div>`;
-          if (d.estado === 'recibida' || d.estado === 'distribuida') tl += `<div class="timeline-item completed"><div class="timeline-title">Recibida en acopio</div><div class="timeline-date">${d.fecha_recibida ? new Date(d.fecha_recibida).toLocaleString('es-VE') : 'N/A'}</div></div>`;
-          if (d.estado === 'cancelada') tl += `<div class="timeline-item pending"><div class="timeline-title">Cancelada</div><div class="timeline-date">${new Date(d.creado_en).toLocaleString('es-VE')}</div></div>`;
-          tl += '</div>';
-          const acciones = d.estado === 'ofrecida' ? `<div class="action-buttons"><button class="btn btn-warning" onclick="abrirModalModificar('${d.id}','${insumoNombre.replace(/'/g, "\\'")}','${primerDetalle?.cantidad||0}','${primerDetalle?.unidad||'unidades'}')">✏️ Modificar</button><button class="btn btn-danger" onclick="cancelarDonacion('${d.id}')">🗑️ Cancelar</button></div>` : '';
-          return `<div class="donation-item"><div class="donation-header"><div class="donation-title">${productos}</div><span class="donation-status ${estadoClass}">${d.estado}</span></div><div class="donation-detail">Acopio: ${UIHarden.escape(d.acopio_destino?.nombre_punto||'Asignado')}</div><div class="donation-detail">Fecha: ${new Date(d.creado_en).toLocaleDateString('es-VE')}</div>${tl}${acciones}<button class="btn btn-primary" style="margin-top:10px;" onclick="verTrazabilidad('${d.id}')">🔍 Ver trazabilidad</button></div>`;
-        }).join('');
-        const paginacionDiv = document.getElementById('paginacion');
-        if (totalPaginas > 1) {
-          paginacionDiv.style.display = 'flex';
-          paginacionDiv.innerHTML = `<button class="btn btn-outline btn-sm" ${paginaActual===1?'disabled':''} onclick="cambiarPagina(-1)">← Anterior</button><span>Página ${paginaActual} de ${totalPaginas}</span><button class="btn btn-outline btn-sm" ${paginaActual===totalPaginas?'disabled':''} onclick="cambiarPagina(1)">Siguiente →</button>`;
-        } else { paginacionDiv.style.display = 'none'; }
-      } catch { lista.innerHTML = '<div class="card" style="padding:40px;text-align:center;"><p style="color:var(--danger);">Error al cargar historial</p></div>'; }
-    }
-
-    // ================================================================
-    // MODALES DEL HISTORIAL
-    // ================================================================
-    function abrirModalModificar(id, detalle, cantidad, unidad) { donacionSeleccionada = id; document.getElementById('mod-detalle').value = detalle || ''; document.getElementById('mod-cantidad').value = cantidad || ''; document.getElementById('mod-unidad').value = unidad || 'unidades'; document.getElementById('modal-modificar').classList.add('active'); }
-    function cerrarModalModificar() { document.getElementById('modal-modificar').classList.remove('active'); donacionSeleccionada = null; }
-    document.getElementById('btn-confirmar-modificar').addEventListener('click', async function() {
-      const b = this; b.disabled = true; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
-      try {
-        const body = {};
-        const detalle = document.getElementById('mod-detalle').value.trim();
-        const cantidad = parseInt(document.getElementById('mod-cantidad').value);
-        const unidad = document.getElementById('mod-unidad').value.trim();
-        if (detalle) body.detalle = detalle; if (cantidad > 0) body.cantidad = cantidad; if (unidad) body.unidad = unidad;
-        await apiFetch('/api/donaciones/' + donacionSeleccionada, { method: 'PATCH', body: JSON.stringify(body) });
-        Mensaje.mostrar('✅ Donación modificada', 'exito'); cerrarModalModificar(); cargarMisDonaciones();
-      } catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
-      finally { b.disabled = false; b.innerHTML = '<i class="fa-solid fa-save"></i> Guardar cambios'; }
-    });
-    window.cancelarDonacion = async function(donacionId) { if (!confirm('¿Cancelar esta donación?')) return; try { await apiFetch('/api/donaciones/' + donacionId + '/cancelar', { method: 'PATCH' }); Mensaje.mostrar('✅ Donación cancelada', 'exito'); cargarMisDonaciones(); } catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); } };
-    window.verTrazabilidad = async function(donacionId) {
-      try {
-        const data = await apiFetch('/api/donaciones/' + donacionId + '/trazabilidad');
-        if (!data.success) throw new Error(data.error?.message || 'Error');
-        const t = data.data;
-        let mensaje = `📦 Trazabilidad de tu donación\n\nInsumos: ${t.insumos.map(i => i.cantidad+' '+i.unidad+' de '+i.nombre).join(', ')}\nEstado actual: ${t.estado_actual}\n\nLínea de tiempo:\n`;
-        t.timeline.forEach(item => { mensaje += `• ${new Date(item.fecha).toLocaleString('es-VE')}: ${item.descripcion}\n`; });
-        if (t.despachos?.length) { mensaje += '\n📦 Despachos realizados:\n'; t.despachos.forEach(d => { mensaje += `• A ${d.destino} (${d.tipo_destino}) - ${d.estado}\n`; }); }
-        alert(mensaje);
-      } catch (e) { alert('Error al obtener trazabilidad: ' + e.message); }
-    };
-
-    // ================================================================
-    // INICIALIZACIÓN FINAL
-    // ================================================================
-    async function init() {
-      const { data: { session } } = await sb.auth.getSession();
-      if (!session) { window.location.href = '/login.html'; return; }
-      try {
-        const res = await apiFetch('/api/perfil');
-        const perfilData = res.data;
-        if (perfilData) {
-          document.getElementById('donante-nombre').textContent = perfilData.nombre_punto || 'Donante';
-          document.getElementById('donante-avatar').textContent = (perfilData.nombre_punto || 'DO').substring(0, 2).toUpperCase();
-          document.getElementById('perfil-nombre').value = perfilData.nombre_punto || '';
-          document.getElementById('perfil-email').value = session.user.email;
-          document.getElementById('perfil-telefono').value = perfilData.telefono || '';
-          document.getElementById('perfil-ubicacion').value = perfilData.direccion_exacta || '';
-          if (perfilData.lat && perfilData.lon) {
-            ubicacionPrincipal = { lat: perfilData.lat, lon: perfilData.lon, direccion: perfilData.direccion_exacta };
-            document.getElementById('btn-usar-ubicacion-principal').style.display = 'block';
-          }
-        }
-      } catch (e) {}
-
-      setupAutocompletadoDireccion();
-
-      if (!ubicacionPrincipal && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async pos => {
-          await guardarUbicacionPrincipal(pos.coords.latitude, pos.coords.longitude);
-          await encontrarAcopioCercano();
-        }, () => {
-          document.getElementById('acopio-nombre').textContent = '📍 Active su ubicación';
-          document.getElementById('acopio-distancia').textContent = 'Para ver centros de acopio cercanos';
-        }, { enableHighAccuracy: true, timeout: 10000 });
-      } else if (ubicacionPrincipal && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async pos => {
-          const dist = calcularDistanciaKM(ubicacionPrincipal.lat, ubicacionPrincipal.lon, pos.coords.latitude, pos.coords.longitude);
-          if (dist > 1) {
-            document.getElementById('aviso-cambio-ubicacion').style.display = 'flex';
-            document.getElementById('texto-cambio-ubicacion').textContent = `Parece que estás a ${dist.toFixed(1)} km de tu ubicación principal. ¿Usar ubicación actual?`;
-          }
-        }, () => {}, { enableHighAccuracy: true, timeout: 10000 });
-        await encontrarAcopioCercano();
-      } else {
-        await encontrarAcopioCercano();
-      }
-    }
-    init();
+    cargarActividad();
   </script>
 </body>
 </html>

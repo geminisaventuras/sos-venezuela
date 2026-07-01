@@ -1,4 +1,4 @@
-// @build: 2026-06-30.02-00-00 | id: COMP-BUSCADOR-V13 | desc: Campos Otro con unidad fija, formato Otro contextual, botón limpiar integrado en input
+// @build: 2026-06-30.16-00-00 | id: COMP-BUSCADOR-V15 | desc: Eliminado 'alimentos' de modulosSinDesgloseUnidad para que siempre pregunte subunidades
 window.BuscadorInsumos = {
   _itemSeleccionado: null,
   _abortController: null,
@@ -21,7 +21,21 @@ window.BuscadorInsumos = {
     otro: { intermedio: null, unidad_minima: 'unidad', genero: 'm' }
   },
 
-  _modulosSinDesgloseUnidad: ['agua', 'alimentos'],
+  _jerarquiaPorModulo: {
+    alimentos: {
+      caja: { intermedio: null, unidad_minima: 'unidades', genero: 'f' },
+      paquete: { intermedio: null, unidad_minima: 'kg', genero: 'm' },
+      bolsa: { intermedio: null, unidad_minima: 'kg', genero: 'f' },
+      bulto: { intermedio: null, unidad_minima: 'unidades', genero: 'm' }
+    },
+    higiene: {
+      caja: { intermedio: null, unidad_minima: 'unidades', genero: 'f' },
+      paquete: { intermedio: null, unidad_minima: 'unidades', genero: 'm' },
+      bolsa: { intermedio: null, unidad_minima: 'unidades', genero: 'f' }
+    }
+  },
+
+  _modulosSinDesgloseUnidad: ['agua'],
   _modulosConConversion: ['agua', 'alimentos'],
 
   _conversiones: {
@@ -33,14 +47,12 @@ window.BuscadorInsumos = {
     kg: { unidad: 'kg', factor: 1 }
   },
 
-  // Unidades fijas para campos "Otro" numéricos
   _unidadesOtro: {
     dosis: 'mg',
     volumen: 'ml',
     peso: 'kg'
   },
 
-  // Placeholders para campos "Otro" de texto libre
   _placeholdersOtro: {
     'tipo-ropa': 'Ej: Chaqueta, Suéter',
     'genero-ropa': 'Ej: Unisex',
@@ -79,7 +91,10 @@ window.BuscadorInsumos = {
       </div>
       <div id="formulario-dinamico"></div>
       <div id="resumen-calculo" style="background:#f0fdf4;padding:10px;border-radius:8px;display:none;margin-top:12px;"></div>
-      <button class="btn btn-success" id="btn-agregar-carrito" disabled>➕ Agregar al carrito</button>
+      <div style="display:flex; gap:10px; margin-top:12px;">
+        <button class="btn btn-success" id="btn-agregar-carrito" disabled style="flex:1;">➕ Agregar</button>
+        <button class="btn btn-outline" id="btn-limpiar-formulario" style="flex:1; display:none;">🗑️ Limpiar</button>
+      </div>
       <div id="mensaje-buscador" class="mensaje" style="display:none;"></div>
     `;
   },
@@ -106,6 +121,7 @@ window.BuscadorInsumos = {
       }
     });
     document.getElementById('btn-agregar-carrito').addEventListener('click', () => this._agregarAlCarrito());
+    document.getElementById('btn-limpiar-formulario').addEventListener('click', () => this._limpiarFormulario());
   },
 
   async _realizarBusqueda(termino) {
@@ -168,7 +184,7 @@ window.BuscadorInsumos = {
     const nombre = item.nombre_generico?.toLowerCase() || '';
     const esCalzado = cat === 'ropa_calzado' && (nombre.includes('zapato') || nombre.includes('calzado'));
 
-    div.innerHTML = ''; // Sin botón de limpiar, ya está integrado en el input
+    div.innerHTML = '';
 
     const esLiquidoMedico = cat === 'medico' && this._extraerOpciones(presentaciones, /\d+\s*(ml|L|litro|cc)/gi).length > 0;
 
@@ -194,12 +210,11 @@ window.BuscadorInsumos = {
       div.innerHTML += `<div class="form-group" id="grupo-vencimiento" style="margin-top:12px;"><label>Fecha de vencimiento <span style="color:var(--danger);">*</span></label><input type="date" id="vencimiento" required></div>`;
     }
 
-    const resumen = document.getElementById('resumen-calculo');
-    if (resumen) resumen.style.display = 'none';
+    document.getElementById('btn-agregar-carrito').disabled = false;
+    document.getElementById('btn-limpiar-formulario').style.display = 'block';
 
     this._vincularEventosDinamicos(cat, item);
     this._generarDesglose(cat);
-    document.getElementById('btn-agregar-carrito').disabled = false;
     this._actualizarResumen();
   },
 
@@ -214,10 +229,8 @@ window.BuscadorInsumos = {
     html += '<option value="otro">Otro</option></select></div>';
 
     if (tipoNumerico) {
-      // Campo numérico con sufijo de unidad fija
       html += `<div class="form-group" id="grupo-${id}-otro" style="display:none;"><label>Especifica otro valor</label><div style="display:flex; align-items:center; gap:8px;"><input type="number" id="${id}-otro" min="1" placeholder="Ej: 1000" style="flex:1;"><span style="font-weight:bold;">${unidad}</span></div></div>`;
     } else {
-      // Campo de texto libre
       const placeholder = this._placeholdersOtro[id] || 'Especifica otro valor';
       html += `<div class="form-group" id="grupo-${id}-otro" style="display:none;"><label>Especifica otro valor</label><input type="text" id="${id}-otro" placeholder="${placeholder}" maxlength="50"></div>`;
     }
@@ -291,7 +304,6 @@ window.BuscadorInsumos = {
 
     let html = `<div class="form-group"><label>¿Cómo viene el producto? <span style="color:var(--danger);">*</span></label><select id="formato">${opciones}<option value="otro">Otro</option></select></div>`;
 
-    // Campo "Otro" para formato con placeholder contextual
     const placeholderFormato = this._placeholdersOtro.formato?.[modulo] || 'Especifica otro formato';
     html += `<div class="form-group" id="grupo-formato-otro" style="display:none;"><label>Especifica otro formato</label><input type="text" id="formato-otro" placeholder="${placeholderFormato}" maxlength="50"></div>`;
 
@@ -375,6 +387,14 @@ window.BuscadorInsumos = {
     return match ? match[0].toLowerCase() : '';
   },
 
+  _obtenerJerarquiaFormato(modulo, formato) {
+    const jerarquiaPorModulo = this._jerarquiaPorModulo[modulo];
+    if (jerarquiaPorModulo && jerarquiaPorModulo[formato]) {
+      return jerarquiaPorModulo[formato];
+    }
+    return this._jerarquia[formato] || { intermedio: null, unidad_minima: 'unidad', genero: 'm' };
+  },
+
   _generarDesglose(modulo) {
     const contenedor = document.getElementById('desglose-container');
     if (!contenedor) return;
@@ -383,7 +403,18 @@ window.BuscadorInsumos = {
       contenedor.innerHTML = this._campoCantidad('unidades', null);
       return;
     }
-    const jerarquia = this._jerarquia[formato];
+    let jerarquia = this._obtenerJerarquiaFormato(modulo, formato);
+
+    // Si es alimento con peso en gramos, preguntar unidades, no kg
+    if (modulo === 'alimentos' && (formato === 'paquete' || formato === 'bolsa' || formato === 'bulto')) {
+      const valorAtributo = this._obtenerValorAtributo();
+      if (valorAtributo && valorAtributo !== 'otro') {
+        const unidad = this._extraerUnidad(valorAtributo);
+        if (unidad === 'g' || unidad === 'gramo') {
+          jerarquia = { intermedio: null, unidad_minima: 'unidades', genero: formato === 'bolsa' ? 'f' : 'm' };
+        }
+      }
+    }
     if (!jerarquia) { contenedor.innerHTML = this._campoCantidad('unidades', null); return; }
 
     const atributoSeleccionado = this._obtenerValorAtributo();
@@ -398,14 +429,16 @@ window.BuscadorInsumos = {
     } else {
       html += this._campoCantidad(formato, null);
       if (!moduloSinDesglose) {
-        html += `<div class="form-group"><label>¿Cuántas ${jerarquia.unidad_minima}s trae cada ${this._formatearFormato(formato).toLowerCase()}?</label><input type="number" id="cant-unidad-minima" min="1" required></div>`;
+        // Evitar el doble plural: si es 'unidades' se usa tal cual, si no se agrega 's'
+        const unidadPregunta = (jerarquia.unidad_minima === 'unidades') ? 'unidades' : jerarquia.unidad_minima + 's';
+        html += `<div class="form-group"><label>¿Cuántas ${unidadPregunta} trae cada ${this._formatearFormato(formato).toLowerCase()}?</label><input type="number" id="cant-unidad-minima" min="1" required></div>`;
       }
     }
     contenedor.innerHTML = html;
   },
 
   _campoCantidad(formato, unidadMinima) {
-    const jer = this._jerarquia[formato] || {};
+    const jer = this._obtenerJerarquiaFormato(this._itemSeleccionado?.categoria?.modulo || 'otros', formato);
     const g = jer.genero || 'm';
     const nombre = this._formatearFormato(formato).toLowerCase();
     if (formato && formato !== 'unidad_suelta' && formato !== 'otro') {
@@ -424,22 +457,13 @@ window.BuscadorInsumos = {
     if (cantidadPrincipal <= 0) { resumen.style.display = 'none'; return; }
 
     const formato = this._obtenerValorFormato();
-    const jer = this._jerarquia[formato] || {};
+    const jer = this._obtenerJerarquiaFormato(cat, formato);
     const cantIntermedia = parseInt(document.getElementById('cant-intermedia')?.value) || 0;
     const cantUnidadMinima = parseInt(document.getElementById('cant-unidad-minima')?.value) || 0;
     const valorAtributo = this._obtenerValorAtributo();
-    const aplicarConversion = this._modulosConConversion.includes(cat);
-    let unidadAtributo = '';
-    let conversion = null;
-
-    if (aplicarConversion && valorAtributo && valorAtributo !== 'otro') {
-      unidadAtributo = this._extraerUnidad(valorAtributo);
-      conversion = this._conversiones[unidadAtributo];
-    }
-
+    let unidad = jer.unidad_minima || 'unidad';
     let total = cantidadPrincipal;
     let detalle = `${cantidadPrincipal} ${this._formatearFormato(formato || 'unidad').toLowerCase()}s`;
-    let unidad = jer.unidad_minima || 'unidad';
 
     if (jer.intermedio && cantIntermedia > 0 && cantUnidadMinima > 0) {
       total = cantidadPrincipal * cantIntermedia * cantUnidadMinima;
@@ -449,11 +473,18 @@ window.BuscadorInsumos = {
       total = cantidadPrincipal * cantUnidadMinima;
       detalle = `${cantidadPrincipal} ${this._formatearFormato(formato).toLowerCase()}s × ${cantUnidadMinima} ${jer.unidad_minima}s`;
       unidad = jer.unidad_minima;
-    } else if (conversion) {
-      const numerico = this._extraerNumerico(valorAtributo);
-      total = cantidadPrincipal * numerico * conversion.factor;
-      detalle = `${cantidadPrincipal} ${this._formatearFormato(formato).toLowerCase()}s × ${numerico}${unidadAtributo}`;
-      unidad = conversion.unidad;
+    }
+
+    const aplicarConversion = this._modulosConConversion.includes(cat);
+    if (aplicarConversion && valorAtributo && valorAtributo !== 'otro') {
+      const unidadAtributo = this._extraerUnidad(valorAtributo);
+      const conversion = this._conversiones[unidadAtributo];
+      if (conversion) {
+        const numericoAtributo = this._extraerNumerico(valorAtributo);
+        total = total * numericoAtributo * conversion.factor;
+        detalle = detalle + ` × ${numericoAtributo}${unidadAtributo}`;
+        unidad = conversion.unidad;
+      }
     }
 
     const extras = [];
@@ -463,12 +494,13 @@ window.BuscadorInsumos = {
     if (talla && talla !== 'otro') extras.push(`Talla ${talla}`);
 
     resumen.style.display = 'block';
-    resumen.innerHTML = `<strong>${detalle} = ${total} ${unidad} de ${item.nombre_generico}${extras.length ? ' (' + extras.join(', ') + ')' : ''}</strong>`;
+    resumen.innerHTML = `<strong>${detalle} = ${total.toFixed(2)} ${unidad} de ${item.nombre_generico}${extras.length ? ' (' + extras.join(', ') + ')' : ''}</strong>`;
   },
 
   _obtenerUnidadMinima() {
     const formato = this._obtenerValorFormato();
-    const jer = this._jerarquia[formato];
+    const cat = this._itemSeleccionado?.categoria?.modulo || 'otros';
+    const jer = this._obtenerJerarquiaFormato(cat, formato);
     const valorAtributo = this._obtenerValorAtributo();
     const unidadAtributo = this._extraerUnidad(valorAtributo);
     const conversion = this._conversiones[unidadAtributo];
@@ -482,21 +514,26 @@ window.BuscadorInsumos = {
     const cantIntermedia = parseInt(document.getElementById('cant-intermedia')?.value) || 0;
     const cantUnidadMinima = parseInt(document.getElementById('cant-unidad-minima')?.value) || 0;
     const formato = this._obtenerValorFormato();
-    const jer = this._jerarquia[formato];
+    const jer = this._obtenerJerarquiaFormato(cat, formato);
     const valorAtributo = this._obtenerValorAtributo();
-    const aplicarConversion = this._modulosConConversion.includes(cat);
-    let conversion = null;
+    let total = cantidadPrincipal;
 
-    if (aplicarConversion && valorAtributo && valorAtributo !== 'otro') {
-      const unidadAtributo = this._extraerUnidad(valorAtributo);
-      conversion = this._conversiones[unidadAtributo];
+    if (!jer) return total;
+    if (jer.intermedio && cantIntermedia > 0 && cantUnidadMinima > 0) {
+      total = cantidadPrincipal * cantIntermedia * cantUnidadMinima;
+    } else if (!jer.intermedio && cantUnidadMinima > 0) {
+      total = cantidadPrincipal * cantUnidadMinima;
     }
 
-    if (!jer) return cantidadPrincipal;
-    if (jer.intermedio && cantIntermedia > 0 && cantUnidadMinima > 0) return cantidadPrincipal * cantIntermedia * cantUnidadMinima;
-    if (!jer.intermedio && cantUnidadMinima > 0) return cantidadPrincipal * cantUnidadMinima;
-    if (conversion) return cantidadPrincipal * this._extraerNumerico(valorAtributo) * conversion.factor;
-    return cantidadPrincipal;
+    const aplicarConversion = this._modulosConConversion.includes(cat);
+    if (aplicarConversion && valorAtributo && valorAtributo !== 'otro') {
+      const unidadAtributo = this._extraerUnidad(valorAtributo);
+      const conversion = this._conversiones[unidadAtributo];
+      if (conversion) {
+        total = total * this._extraerNumerico(valorAtributo) * conversion.factor;
+      }
+    }
+    return total;
   },
 
   async _agregarAlCarrito() {
@@ -507,37 +544,68 @@ window.BuscadorInsumos = {
 
     await this._persistirValoresOtro(item);
 
-    const total = this._calcularTotal();
-    const unidad = this._obtenerUnidadMinima();
-    const genero = document.getElementById('genero-ropa')?.value || document.getElementById('genero-calzado')?.value || null;
-    const talla = document.getElementById('talla-ropa')?.value || document.getElementById('talla-calzado')?.value || null;
+    const cantUnidadMinima = parseInt(document.getElementById('cant-unidad-minima')?.value) || 1;
+    const valorAtributo = this._obtenerValorAtributo();       
     const formato = this._obtenerValorFormato();
+    const cat = item.categoria?.modulo || 'otros';
 
-    const itemData = {
+    // Calcular totales utilizando tus funciones internas validadas
+    const totalUnidades = cantidadPrincipal * cantUnidadMinima;
+
+    let totalKg = this._calcularTotal();
+    totalKg = Math.round(totalKg * 100) / 100;   // ← Redondeo añadido
+    const unidadFinal = this._obtenerUnidadMinima();
+
+    // Reconstruir el detalle legible basado en tus selectores
+    let detalleAmigable = '';
+    if (formato === 'unidad_suelta') {
+      // Para unidad suelta, solo mostrar la cantidad de unidades
+      detalleAmigable = `${cantidadPrincipal} unidades`;
+    } else {
+      // Para cualquier otro formato (caja, paquete, etc.)
+      detalleAmigable = `${cantidadPrincipal} ${this._formatearFormato(formato || 'unidad').toLowerCase()}s × ${cantUnidadMinima} unidades`;
+      if (valorAtributo && valorAtributo !== 'otro') {
+        detalleAmigable += ` × ${valorAtributo}`;
+      }
+      detalleAmigable += ` = ${totalUnidades} unidades`;
+    }
+
+    // ESTRUCTURA DE RETORNO COMPATIBLE CON EL CARRITO
+    const itemParaCarrito = {
       id: item.id,
       nombre: item.nombre_generico,
-      cantidad: total,
-      unidad: unidad,
-      categoria: item.categoria?.modulo || 'otros',
-      extra: {
-        dosis: this._obtenerValorAtributo() || null,
-        formato: formato,
-        genero: genero,
-        talla: talla,
-        vencimiento: document.getElementById('vencimiento')?.value || null
+      categoria: item.categoria?.nombre_interno || cat,
+      cantidadOriginal: cantidadPrincipal, // Guarda el formato macro (Ej: 2 cajas)
+      cantidad: totalKg,                 // Guarda el peso métrico interno para reportes
+      unidad: unidadFinal,
+      detalle: detalleAmigable,
+      
+      // SOLUCIÓN: Inyectamos el contrato de la fórmula que exige CarritoInsumos._mostrarModalModificar()
+      _formula: {
+        modulo: cat,
+        formato: formato || 'unidad_suelta',
+        cantUnidadMinima: cantUnidadMinima,
+        valorAtributo: valorAtributo,
+        pesoUnitario: (valorAtributo && valorAtributo !== 'otro') ? this._extraerNumerico(valorAtributo) : 0
       }
     };
-    if (this._opciones.onAgregar) this._opciones.onAgregar(itemData);
-    this._limpiarFormulario();
-    this._mostrarMensaje('✅ Agregado al carrito', 'exito');
+
+    // Despachar de forma segura al Carrito Global
+    if (window.CarritoInsumos) {
+      window.CarritoInsumos.agregar(itemParaCarrito);
+      this._limpiarFormulario();
+      this._mostrarMensaje('¡Producto agregado al carrito!', 'success');
+    } else {
+      console.error("Error: Componente CarritoInsumos no inicializado.");
+    }
   },
+
 
   async _persistirValoresOtro(item) {
     const presentacionesNuevas = [];
     const camposConUnidad = ['dosis', 'volumen', 'peso'];
     const camposTextoLigero = ['tipo-ropa', 'genero-ropa', 'talla-ropa', 'tipo-calzado', 'genero-calzado', 'talla-calzado', 'tipo-higiene', 'tipo-logistica'];
 
-    // Procesar campos numéricos con unidad fija
     for (const id of camposConUnidad) {
       const sel = document.getElementById(id);
       if (sel && sel.value === 'otro') {
@@ -553,7 +621,6 @@ window.BuscadorInsumos = {
       }
     }
 
-    // Procesar campos de texto libre
     for (const id of camposTextoLigero) {
       const sel = document.getElementById(id);
       if (sel && sel.value === 'otro') {
@@ -568,7 +635,6 @@ window.BuscadorInsumos = {
       }
     }
 
-    // Procesar formato "Otro"
     const selFormato = document.getElementById('formato');
     if (selFormato && selFormato.value === 'otro') {
       const otroFormato = document.getElementById('formato-otro');
@@ -605,6 +671,7 @@ window.BuscadorInsumos = {
     const resumen = document.getElementById('resumen-calculo');
     if (resumen) resumen.style.display = 'none';
     document.getElementById('btn-agregar-carrito').disabled = true;
+    document.getElementById('btn-limpiar-formulario').style.display = 'none';
     this._itemSeleccionado = null;
   },
 

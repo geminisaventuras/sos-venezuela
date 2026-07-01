@@ -84,6 +84,16 @@ class EntregaRepository {
 
     return enriquecidas;
   }
+
+    async registrarIncidencia(entregaId, userId, tipo, descripcion) {
+  const { error } = await supabase.from('incidencias').insert({
+    entrega_id: entregaId,
+    tipo: tipo,
+    descripcion: descripcion || tipo,  // ← Usa el tipo como descripción si no se proporciona
+    reportado_por: userId
+  });
+  if (error) throw new Error(`Error al registrar incidencia: ${error.message}`);
+}
 }
 
 module.exports = EntregaRepository;

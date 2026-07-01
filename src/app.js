@@ -1,4 +1,5 @@
 ﻿// @build: 2026-06-28.19-30-00 | id: B0-APP-CSP-FIX | desc: CSP corregida para desarrollo local (localhost) y producción
+require('dotenv').config();
 const express = require('express')
 const cors = require('cors')
 const helmet = require('helmet')
@@ -20,6 +21,7 @@ const app = express()
 // CORS restrictivo: solo orígenes autorizados
 const allowedOrigins = [
   'http://localhost:3000',
+  'https://192.168.1.152:3000',
   'https://sos-venezuela-backend.onrender.com'
 ]
 
@@ -45,14 +47,15 @@ app.use(helmet({
       styleSrc: "'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com https://cdnjs.cloudflare.com",
       fontSrc: "'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com",
       imgSrc: "'self' data: https: blob: https://*.tile.openstreetmap.org",
-      connectSrc: "'self' http://localhost:3000 https://sos-venezuela-backend.onrender.com https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org",
+      connectSrc: "'self' http://localhost:3000 http://192.168.1.152:3000 https://192.168.1.152:3000 https://sos-venezuela-backend.onrender.com https://*.supabase.co wss://*.supabase.co https://routing.openstreetmap.de https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org",
       frameSrc: "'self'",
       childSrc: "'self'",
       objectSrc: "'none'"
     }
   },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  upgradeInsecureRequests: false   // ← NUEVO: evita que el navegador intente usar HTTPS en desarrollo
 }))
 
 

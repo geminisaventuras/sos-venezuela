@@ -10,6 +10,9 @@ const repo = new VoluntarioRepository();
 const service = new VoluntarioService(repo);
 const controller = new VoluntarioController(service);
 
+// Endpoint para liberar sesiones atrapadas (sin authMiddleware porque la sesión está bloqueada)
+router.post('/liberar-sesion', (req, res, next) => controller.liberarSesion(req, res, next));
+
 router.post('/', authMiddleware, roleMiddleware('voluntario'), (req, res, next) => controller.registrar(req, res, next));
 router.get('/mi-perfil', authMiddleware, roleMiddleware('voluntario'), (req, res, next) => controller.miPerfil(req, res, next));
 router.get('/necesidades-cercanas', authMiddleware, roleMiddleware('voluntario', 'centro_acopio'), (req, res, next) => controller.necesidadesCercanas(req, res, next));

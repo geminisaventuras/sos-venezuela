@@ -12,6 +12,8 @@ const crearEntregaSchema = z.object({
 
 const actualizarEstadoSchema = z.object({
   estado: z.enum(['en_camino', 'entregada', 'cancelada']),
+  motivo: z.string().optional(),       // ← NUEVO
+  descripcion: z.string().max(500).optional() // ← NUEVO
 });
 
 module.exports = { crearEntregaSchema, actualizarEstadoSchema };

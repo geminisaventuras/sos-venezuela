@@ -1,104 +1,287 @@
-﻿<!-- @build: 2026-07-01.12-00-00 | id: B25-VOLUNTARIO-UNIFICADO | desc: Dashboard Transportista con vista unificada, mapa protagonista, tarjetas expandibles, indicadores de urgencia, modo conductor y sesión persistente -->
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SOS Venezuela | Transportista</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>SOS Venezuela | Conductores y Motorizados</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     :root {
-      --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
-      --bg: #f8fafc; --card: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0;
-      --radius: 16px; --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      --bg-premium: #f4f6fa;
+      --card-premium: #ffffff;
+      --card-hover: #f8fafc;
+      --border-premium: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --color-azul-yummy: #2563eb;
+      --color-azul-glow: rgba(37, 99, 235, 0.15);
+      --color-verde-yummy: #10b981;
+      --color-verde-glow: rgba(16, 185, 129, 0.15);
+      --color-amarillo-alerta: #f59e0b;
+      --color-rojo-alerta: #ef4444;
+      --radius-premium: 24px;
+      --shadow-premium: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text-main); padding-bottom: 80px; }
-    .header { background: var(--card); padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { font-size: 20px; font-weight: 700; color: var(--primary); }
-    .header h1 span { color: var(--accent); }
+    
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background-color: var(--bg-premium); 
+      color: var(--text-main); 
+      padding-bottom: 100px;
+      overflow-x: hidden;
+      letter-spacing: -0.2px;
+    }
+
+    /* BARRA SUPERIOR PREMIUM */
+    .header { 
+      background: rgba(255, 255, 255, 0.9); 
+      padding: 18px 24px; 
+      border-bottom: 1px solid var(--border-premium); 
+      position: sticky; 
+      top: 0; 
+      z-index: 1100; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    }
+    .header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.8px; color: var(--text-main); }
+    .header h1 span { color: var(--color-azul-yummy); }
+    
     .header-actions { display: flex; gap: 12px; align-items: center; }
-    .icon-btn { background: var(--bg); border: 1px solid var(--border); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 16px; cursor: pointer; transition: all 0.2s; position: relative; }
-    .icon-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
-    .icon-btn.active { background: var(--success); color: white; border-color: var(--success); }
-    .badge-notificacion { position: absolute; top: -4px; right: -4px; background: var(--danger); color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; display: none; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; cursor: pointer; }
+    
+    .icon-btn { 
+      background: #ffffff; 
+      border: 1px solid var(--border-premium); 
+      width: 46px; 
+      height: 46px; 
+      border-radius: 50%; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      color: var(--text-muted); 
+      font-size: 19px; 
+      cursor: pointer; 
+      transition: all 0.2s ease; 
+      box-shadow: var(--shadow-premium);
+    }
+    .icon-btn:hover { background: var(--color-azul-yummy); color: white; border-color: var(--color-azul-yummy); }
+    .icon-btn.active { background: var(--color-verde-yummy); color: white; border-color: var(--color-verde-yummy); box-shadow: 0 0 15px var(--color-verde-glow); }
+
+    .avatar { 
+      width: 46px; 
+      height: 46px; 
+      border-radius: 50%; 
+      background: linear-gradient(135deg, var(--color-azul-yummy), #1d4ed8); 
+      color: white; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-weight: 700; 
+      font-size: 15px; 
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+      border: 2px solid white;
+    }
+
     .container { padding: 16px; max-width: 600px; margin: 0 auto; }
     .section { display: none; }
-    .section.active { display: block; }
-    .modo-indicador { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px; }
-    .modo-activo { background: #d1fae5; color: #065f46; }
-    .modo-inactivo { background: #fee2e2; color: #991b1b; }
-    .card { background: var(--card); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 16px; }
-    .card h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    .form-group { margin-bottom: 14px; }
-    label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; }
-    input, select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 16px; font-family: inherit; background: white; }
-    input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-    .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 600; font-size: 16px; cursor: pointer; }
-    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .btn-primary { background: var(--accent); color: white; }
-    .btn-success { background: var(--success); color: white; }
-    .btn-danger { background: var(--danger); color: white; }
-    .btn-accept { background: var(--success); color: white; font-size: 14px; padding: 10px; }
-    .btn-navigate { background: #1a73e8; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; margin-top: 8px; }
-    .map { height: 250px; border-radius: var(--radius); margin-bottom: 16px; border: 1px solid var(--border); }
-    .filtro-select { margin-bottom: 12px; }
-    .servicio-item { background: var(--card); padding: 16px; border-radius: var(--radius); border-left: 4px solid var(--border); margin-bottom: 12px; cursor: pointer; transition: all 0.2s; }
-    .servicio-item:hover { box-shadow: var(--shadow); }
-    .servicio-item.recoleccion { border-left-color: #f59e0b; }
-    .servicio-item.distribucion { border-left-color: #3b82f6; }
-    .servicio-item.urgente { border-left-color: var(--danger); }
-    .servicio-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .servicio-tipo { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; }
-    .servicio-distancia { font-size: 12px; color: var(--text-muted); background: var(--bg); padding: 2px 8px; border-radius: 8px; }
-    .servicio-detalle { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
-    .servicio-expand { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .section.active { display: block; animation: slideUpPremium 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+
+    @keyframes slideUpPremium { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* PANEL HUD DE ESTADO VENEZUELA */
+    .hud-status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-premium);
+      padding: 16px 24px;
+      border-radius: var(--radius-premium);
+      margin-bottom: 20px;
+      border: 1px solid var(--border-premium);
+      box-shadow: var(--shadow-premium);
+    }
+    .hud-label { font-size: 15px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+    .status-badge-premium { 
+      padding: 6px 16px; 
+      border-radius: 30px; 
+      font-size: 13px; 
+      font-weight: 800; 
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-online { background: rgba(16, 185, 129, 0.1); color: #065f46; border: 1px solid rgba(16, 185, 129, 0.2); }
+    .status-offline { background: rgba(239, 68, 68, 0.1); color: #991b1b; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+    /* CONTENEDOR DEL MAPA DIURNO */
+    .map-wrapper-premium {
+      position: relative;
+      border-radius: var(--radius-premium);
+      overflow: hidden;
+      margin-bottom: 24px;
+      border: 1px solid var(--border-premium);
+      box-shadow: var(--shadow-premium);
+    }
+    .map { height: 350px; width: 100%; background: #e5e7eb; }
+
+    /* FILTRO DE SELECCIÓN DE CARRERAS */
+    .filter-container-premium {
+      background: var(--card-premium);
+      padding: 8px;
+      border-radius: 18px;
+      border: 1px solid var(--border-premium);
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-premium);
+    }
+    .filter-container-premium select {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      background: #f1f5f9;
+      color: var(--text-main);
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* TARJETAS DE VIAJES Y CARRERAS PREMIUM VENEZUELA */
+    .servicio-item { 
+      background: var(--card-premium); 
+      padding: 24px; 
+      border-radius: var(--radius-premium); 
+      border: 1px solid var(--border-premium);
+      border-left: 8px solid #94a3b8; 
+      margin-bottom: 18px; 
+      cursor: pointer; 
+      transition: all 0.25s ease;
+      box-shadow: var(--shadow-premium);
+    }
+    .servicio-item:hover { transform: translateY(-2px); background: var(--card-hover); box-shadow: 0 15px 30px -5px rgba(15, 23, 42, 0.12); }
+    .servicio-item.recoleccion { border-left-color: var(--color-amarillo-alerta); }
+    .servicio-item.distribucion { border-left-color: var(--color-azul-yummy); }
+    .servicio-item.urgente { border-left-color: var(--color-rojo-alerta); background: linear-gradient(90deg, rgba(239, 68, 68, 0.02) 0%, var(--card-premium) 100%); }
+    
+    .servicio-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .servicio-tipo { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; color: var(--text-main); }
+    .servicio-distancia { 
+      font-size: 13px; 
+      font-weight: 800; 
+      color: var(--color-azul-yummy); 
+      background: rgba(37, 99, 235, 0.08); 
+      padding: 6px 14px; 
+      border-radius: 14px; 
+      border: 1px solid rgba(37, 99, 235, 0.15);
+    }
+    
+    .servicio-linea-info { font-size: 15px; color: var(--text-main); margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px; line-height: 1.4; }
+    .servicio-linea-info i { color: var(--text-muted); margin-top: 3px; font-size: 16px; width: 20px; text-align: center; }
+    
+    .servicio-expand { 
+      display: none; 
+      margin-top: 18px; 
+      padding-top: 18px; 
+      border-top: 1px solid var(--border-premium); 
+    }
+    .servicio-item.expandido { border-color: #cbd5e1; background: var(--card-hover); }
     .servicio-item.expandido .servicio-expand { display: block; }
-    .badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: white; }
-    .badge-urgente { background: var(--danger); }
-    .badge-reciente { background: var(--success); }
-    .badge-recogida { background: #f59e0b; }
-    .badge-distribucion { background: #3b82f6; }
-    .empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
-    .loading { text-align: center; padding: 20px; color: var(--text-muted); }
-    .mensaje { padding: 12px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; display: none; }
-    .mensaje.exito { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-    .mensaje.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; }
-    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); border: none; background: none; font-size: 10px; font-weight: 500; padding: 6px 12px; border-radius: 8px; cursor: pointer; position: relative; }
-    .nav-item i { font-size: 20px; }
-    .nav-item.active { color: var(--accent); }
-    .nav-item .nav-badge { position: absolute; top: 0px; right: 2px; background: var(--danger); color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 9px; display: flex; align-items: center; justify-content: center; font-weight: 700; display: none; }
-    .paginacion { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px; }
-    .paginacion button { width: auto; padding: 10px 20px; }
-    .paginacion span { font-size: 14px; color: var(--text-muted); }
-    .sub-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-    .sub-tab { flex: 1; padding: 10px; text-align: center; background: var(--bg); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); }
-    .sub-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+    
+    /* DETALLE DEL CONTENIDO DEL VIAJE */
+    .manifest-premium-box {
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 16px;
+      margin: 14px 0;
+      border: 1px solid var(--border-premium);
+    }
+    .manifest-premium-box strong { font-size: 13px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; display: block; margin-bottom: 8px; }
+    .manifest-premium-box ul { list-style: none; }
+    .manifest-premium-box li { font-size: 15px; margin-bottom: 8px; font-weight: 600; display: flex; align-items: center; gap: 10px; color: var(--text-main); }
+    .manifest-premium-box li::before { content: '■'; color: var(--color-azul-yummy); font-size: 10px; }
+
+    .badge { padding: 4px 12px; border-radius: 10px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: white; display: inline-block; }
+    .badge-urgente { background: var(--color-rojo-alerta); }
+    .badge-reciente { background: var(--color-verde-yummy); }
+    .badge-recogida { background: var(--color-amarillo-alerta); }
+    .badge-distribucion { background: var(--color-azul-yummy); }
+
+    /* BOTONES TÁCTILES GRANDES (MOTO / CARRO) */
+    .btn { 
+      width: 100%; 
+      height: 56px; 
+      border: none; 
+      border-radius: 16px; 
+      font-weight: 800; 
+      font-size: 16px; 
+      cursor: pointer; 
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+    .btn-success { background: linear-gradient(135deg, var(--color-verde-yummy), #047857); color: white; }
+    .btn-danger { background: #f1f5f9; color: var(--color-rojo-alerta); border: 1px solid rgba(239, 68, 68, 0.15); box-shadow: none; }
+    .btn-primary { background: linear-gradient(135deg, var(--color-azul-yummy), #1d4ed8); color: white; }
+    
+    .btn:active:not(:disabled) { transform: scale(0.97); }
+
+    /* SECCIONES INTERNAS */
+    .sub-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .sub-tab { flex: 1; padding: 14px; text-align: center; background: var(--card-premium); border-radius: 14px; font-size: 14px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-premium); transition: all 0.2s; color: var(--text-muted); box-shadow: var(--shadow-premium); }
+    .sub-tab.active { background: #ffffff; color: var(--color-azul-yummy); border-color: var(--color-azul-yummy); box-shadow: 0 4px 12px var(--color-azul-glow); }
+
+    /* FORMULARIOS DE REGISTRO */
+    .form-group { margin-bottom: 18px; }
+    label { display: block; margin-bottom: 8px; font-weight: 700; font-size: 13px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+    input, select { width: 100%; height: 52px; padding: 0 16px; border: 1px solid var(--border-premium); border-radius: 14px; font-size: 16px; background: #ffffff; color: var(--text-main); font-family: inherit; }
+    input:focus, select:focus { outline: none; border-color: var(--color-azul-yummy); box-shadow: 0 0 0 3px var(--color-azul-glow); }
+
+    /* MENÚ INFERIOR ESTILO HUD APP MOVILIDAD */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid var(--border-premium); display: flex; justify-content: space-around; padding: 12px 0; z-index: 2000; box-shadow: 0 -8px 25px rgba(15, 23, 42, 0.05); }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); border: none; background: none; font-size: 12px; font-weight: 700; padding: 8px 20px; border-radius: 16px; cursor: pointer; transition: all 0.2s; }
+    .nav-item i { font-size: 24px; }
+    .nav-item.active { color: var(--color-azul-yummy); background: var(--color-azul-glow); }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.4); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
     .modal-overlay.active { display: flex; }
-    .modal { background: white; border-radius: var(--radius); padding: 20px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto; }
-    .modal h3 { font-size: 18px; margin-bottom: 16px; }
-    .toast { position: fixed; top: 80px; right: 16px; background: var(--primary); color: white; padding: 12px 16px; border-radius: 10px; z-index: 300; font-size: 14px; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.3s ease; }
-    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .modal { background: var(--card-premium); border-radius: var(--radius-premium); padding: 28px; max-width: 500px; width: 100%; border: 1px solid var(--border-premium); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); }
+    .modal h3 { font-size: 20px; font-weight: 800; margin-bottom: 20px; color: var(--text-main); }
+
+    .alert-aviso { background: #fffbeb; border: 1px solid #fef3c7; color: #b45309; padding: 16px; border-radius: 16px; font-weight: 700; font-size: 14px; margin-bottom: 20px; text-align: center; }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 16px; font-weight: 500; }
+    .loading { text-align: center; padding: 30px; color: var(--color-azul-yummy); font-weight: 700; font-size: 15px; }
+    .toast { position: fixed; bottom: 110px; left: 20px; right: 20px; background: var(--text-main); color: white; padding: 18px; border-radius: 16px; z-index: 4000; font-size: 15px; display: none; box-shadow: var(--shadow-premium); font-weight: 700; text-align: center; }
+    .entrega-item { background: var(--card-premium); padding: 20px; border-radius: var(--radius-premium); border: 1px solid var(--border-premium); margin-bottom: 16px; box-shadow: var(--shadow-premium); }
+    .entrega-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .paginacion { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 24px; }
+    .paginacion button { width: auto; height: 44px; padding: 0 20px; }
   </style>
 </head>
 <body>
-  <header class="header" id="header-voluntario">
-    <h1>SOS <span>Venezuela</span></h1>
+
+  <header class="header">
+    <h1>SOS <span>Ruta</span></h1>
     <div class="header-actions">
-      <button class="icon-btn" id="btn-modo-conductor" onclick="toggleModoConductor()" title="Activar modo conductor">
-        <i class="fa-solid fa-truck"></i>
+      <button class="icon-btn" id="btn-modo-conductor" onclick="toggleModoConductor()" title="Prender Modo Trabajo">
+        <i class="fa-solid fa-toggle-on"></i>
       </button>
-      <button class="icon-btn" onclick="actualizarUbicacionGPS()" title="Actualizar mi ubicación">
+      <button class="icon-btn" onclick="actualizarUbicacionGPS()" title="Sincronizar Ubicación GPS">
         <i class="fa-solid fa-location-crosshairs"></i>
       </button>
-      <button class="icon-btn" onclick="logout()" title="Cerrar sesión">
-        <i class="fa-solid fa-right-from-bracket"></i>
+      <button class="icon-btn" onclick="logout()" title="Cerrar Sesión Segura">
+        <i class="fa-solid fa-power-off"></i>
       </button>
       <div class="avatar" id="voluntario-avatar" onclick="abrirModalPerfil()">VL</div>
     </div>
@@ -108,53 +291,76 @@
     <div id="mensaje-global" class="mensaje"></div>
     <div id="toast-notificacion" class="toast" onclick="mostrarSeccion('servicios'); this.style.display='none';"></div>
 
-    <!-- SECCIÓN SERVICIOS (VISTA UNIFICADA) -->
     <div class="section active" id="section-servicios">
-      <div id="aviso-perfil" class="alert-aviso" style="display:none;">⚠️ Completa tu perfil de transporte para empezar a ayudar.</div>
-      <div class="map" id="mapa-servicios"></div>
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <h2 style="font-size:18px; margin:0;">Servicios disponibles</h2>
-        <span class="modo-indicador modo-inactivo" id="indicador-modo">🔴 En espera</span>
+      <div id="aviso-perfil" class="alert-aviso">⚠️ DATOS DE MOTO O CARRO INCOMPLETOS. Toca tu avatar arriba a la derecha para rellenar tus datos y poder agarrar viajes.</div>
+      
+      <div class="map-wrapper-premium">
+        <div class="map" id="mapa-servicios"></div>
       </div>
-      <div class="filtro-select">
-        <select id="filtro-servicios" onchange="aplicarFiltro()" style="width:100%;">
-          <option value="todos">📋 Todos los servicios</option>
-          <option value="recolecciones">📦 Recolecciones</option>
-          <option value="distribuciones">🚚 Distribuciones</option>
+
+      <div class="hud-status-bar">
+        <span class="hud-label"><i class="fa-solid fa-satellite-dish" style="color:var(--color-azul-yummy);"></i> Buscar Viajes Cercanos</span>
+        <span class="modo-indicador modo-inactivo" id="indicador-modo">🔴 Apagado</span>
+      </div>
+
+      <div class="filter-wrapper">
+        <select id="filtro-servicios" onchange="aplicarFiltro()">
+          <option value="todos">📋 Ver todos los viajes disponibles</option>
+          <option value="recolecciones">📦 Ver solo: Buscar Donaciones (Acopios)</option>
+          <option value="distribuciones">🚚 Ver solo: Llevar Ayuda (Entregas)</option>
         </select>
       </div>
-      <div id="lista-servicios"><div class="loading">Cargando servicios...</div></div>
+
+      <div id="lista-servicios"><div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Conectando al radar de viajes...</div></div>
       <div class="paginacion" id="paginacion-servicios" style="display:none;"></div>
     </div>
 
-    <!-- SECCIÓN MI ACTIVIDAD -->
     <div class="section" id="section-actividad">
-      <h2 style="font-size:18px; margin-bottom:16px;">📋 Mi Actividad</h2>
-      <div class="sub-tabs">
-        <div class="sub-tab active" id="sub-tab-activos" onclick="cambiarSubTab('activos')">🟢 Activos</div>
-        <div class="sub-tab" id="sub-tab-historial" onclick="cambiarSubTab('historial')">📦 Historial</div>
+      <div class="hud-status-bar">
+        <span class="hud-label"><i class="fa-solid fa-truck-ramp-box" style="color:var(--color-azul-yummy);"></i> Control de mis Viajes</span>
       </div>
-      <div id="lista-actividad"><div class="loading">Cargando actividad...</div></div>
+      <div class="sub-tabs">
+        <div class="sub-tab active" id="sub-tab-activos" onclick="cambiarSubTab('activos')">🟢 Viajes en curso</div>
+        <div class="sub-tab" id="sub-tab-historial" onclick="cambiarSubTab('historial')">📦 Carreras terminadas</div>
+      </div>
+      <div id="lista-actividad"><div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando tus viajes actuales...</div></div>
       <div class="paginacion" id="paginacion-actividad" style="display:none;"></div>
     </div>
   </div>
 
-  <!-- MODAL PERFIL -->
   <div class="modal-overlay" id="modal-perfil">
     <div class="modal">
-      <h3>👤 Datos de Transporte</h3>
+      <h3><i class="fa-solid fa-id-card" style="color:var(--color-azul-yummy);"></i> Datos de la Moto / Carro</h3>
       <form id="form-perfil">
         <div class="form-group"><label>Nombre Completo</label><input type="text" id="perfil-nombre" required maxlength="100"></div>
-        <div class="form-group"><label>Teléfono</label><input type="text" id="perfil-telefono" required inputmode="numeric" pattern="[0-9]{7,15}"></div>
-        <div class="form-group"><label>Tipo de Vehículo</label><select id="perfil-vehiculo" required>
-          <option value="moto">🏍️ Moto</option><option value="carro">🚗 Carro</option><option value="camioneta">🚛 Camioneta</option><option value="bicicleta">🚲 Bicicleta</option><option value="a_pie">🚶 A pie</option>
-        </select></div>
-        <div class="form-group"><label>Capacidad de Carga (opcional)</label><input type="text" id="perfil-capacidad" placeholder="Ej: 100 kg"></div>
-        <div class="form-group"><label>Ubicación</label><button type="button" class="btn btn-primary" onclick="obtenerUbicacionGPS()">📍 Usar mi ubicación actual</button>
-        <input type="hidden" id="perfil-lat"><input type="hidden" id="perfil-lon"><p id="perfil-coords" style="font-size:12px;color:var(--text-muted);margin-top:6px;"></p></div>
-        <button type="submit" class="btn btn-success">💾 Guardar Perfil</button>
+        <div class="form-group"><label>Teléfono Celular</label><input type="text" id="perfil-telefono" required inputmode="numeric" pattern="[0-9]{7,15}"></div>
+        <div class="form-group">
+          <label>¿En qué te desplazas?</label>
+          <select id="perfil-vehiculo" required>
+            <option value="moto">🏍️ Moto / Motocicleta</option>
+            <option value="carro">🚗 Carro / Automóvil Particular</option>
+            <option value="camioneta">🚛 Camioneta de Carga / Camión</option>
+            <option value="bicicleta">🚲 Bicicleta</option>
+            <option value="a_pie">🚶 Desplazamiento a pie</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Capacidad de Carga Máxima</label>
+          <input type="text" id="perfil-capacidad" placeholder="Ej: 80 kg, 3 bultos de comida">
+        </div>
+        <div class="form-group">
+          <label>Dirección o Zona de Salida (Casa)</label>
+          <button type="button" class="btn btn-primary" onclick="obtenerUbicacionGPSPerfil()" id="btn-gps-perfil" style="background:#f1f5f9; color:var(--text-main); border:1px solid var(--border-premium);">
+            <i class="fa-solid fa-location-crosshairs" style="color:var(--color-azul-yummy);"></i> Fijar Coordenadas GPS del Teléfono
+          </button>
+          <input type="hidden" id="perfil-lat"><input type="hidden" id="perfil-lon">
+          <p id="perfil-coords" style="font-size:13px; color:var(--color-azul-yummy); margin-top:8px; font-weight:700; font-family:monospace; text-align:center;"></p>
+        </div>
+        <button type="submit" id="btn-guardar-perfil" class="btn btn-primary">
+          <i class="fa-solid fa-circle-check"></i> Activar Ficha en la Flota
+        </button>
       </form>
-      <button class="btn btn-danger" style="margin-top:8px;" onclick="cerrarModalPerfil()">Cancelar</button>
+      <button class="btn btn-danger" style="margin-top:10px;" onclick="cerrarModalPerfil()"><i class="fa-solid fa-rectangle-xmark"></i> Salir de Ajustes</button>
     </div>
   </div>
 
@@ -167,21 +373,17 @@
   <script src="componentes/bottom-nav.js"></script>
   <script src="componentes/utilidades.js"></script>
   <script>
-    if (!verificarSesion(['voluntario'])) throw new Error('Acceso denegado');
+    if (!verificarSesion(['voluntario'])) throw new Error('Acceso Restringido Terminal');
 
     const sb = supabase.createClient('https://kxqwxiolouhrwddaqynp.supabase.co', 'sb_publishable_iJt58cRTDAYH_j_Mv1bJ4g_g0HdRlBF');
-    let perfilVoluntario = null;
-    let mapaServicios = null;
-    let marcadoresServicios = [];
+    let perfilVoluntario = null, mapaServicios = null, marcadoresServicios = [];
     let paginaServicios = 1, paginaActividad = 1, paginaHistorial = 1;
     const ITEMS_POR_PAGINA = 5;
     let todosServicios = [], serviciosActivos = [], historialCompletado = [];
     let modoConductorActivo = false, intervaloRefresh = null, wakeLock = null;
-    let subTabActiva = 'activos';
-    let contadorNuevosServicios = 0;
-    let suscripcionRealtime = null;
+    let subTabActiva = 'activos', contadorNuevosServicios = 0, suscripcionRealtime = null;
+    let abortController = null;
 
-    // ========== INICIALIZAR COMPONENTES ==========
     Mensaje.init('mensaje-global');
     document.getElementById('voluntario-avatar').innerText = (perfil.nombre_punto || 'VL').substring(0, 2).toUpperCase();
 
@@ -189,102 +391,111 @@
       contenedorId: 'bottom-nav-voluntario',
       activaInicial: 'servicios',
       secciones: [
-        { id: 'servicios', icono: 'fa-solid fa-map-location-dot', label: 'Servicios' },
-        { id: 'actividad', icono: 'fa-solid fa-list-check', label: 'Mi Actividad' }
+        { id: 'servicios', icono: 'fa-solid fa-map-location-dot', label: 'Explorar' },
+        { id: 'actividad', icono: 'fa-solid fa-route', label: 'Mis Viajes' }
       ],
       onChange: (seccion) => mostrarSeccion(seccion)
     });
 
-    // ========== UTILIDADES ==========
     function formatearFecha(fecha) { return new Date(fecha).toLocaleString('es-VE'); }
+    
     function generarEnlaceNavegacion(lat, lon) {
       if (!lat || !lon) return '';
-      return `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}" target="_blank" class="btn btn-navigate"><i class="fa-solid fa-map-pin"></i> Navegar</a>`;
+      // RESTAURACIÓN INTEGRAL DE SINTAXIS CANÓNICA QUE MARCA LA RUTA DIRECTA EN TU TELÉFONO
+      return `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}" target="_blank" class="btn btn-primary btn-navigate"><i class="fa-solid fa-location-arrow"></i> Abrir en Mapas del Teléfono</a>`;
     }
+
     function escapar(str) { return UIHarden ? UIHarden.escape(str) : str; }
+    
     function calcularDistancia(lat1, lon1, lat2, lon2) {
       const R = 6371; const dLat = (lat2-lat1)*Math.PI/180; const dLon = (lon2-lon1)*Math.PI/180;
       const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
       return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(1);
     }
+    
     function esUrgente(fecha) { return (Date.now() - new Date(fecha).getTime()) > 2 * 60 * 60 * 1000; }
     function esReciente(fecha) { return (Date.now() - new Date(fecha).getTime()) < 60 * 60 * 1000; }
 
-    // ========== MODO CONDUCTOR ==========
     async function toggleModoConductor() { modoConductorActivo ? await desactivarModoConductor() : await activarModoConductor(); }
+    
     async function activarModoConductor() {
       modoConductorActivo = true;
-      document.getElementById('btn-modo-conductor').classList.add('active');
-      document.getElementById('indicador-modo').className = 'modo-indicador modo-activo';
-      document.getElementById('indicador-modo').textContent = '🟢 En servicio';
+      document.getElementById('btn-modo-conductor').className = 'icon-btn active';
+      document.getElementById('btn-modo-conductor').innerHTML = '<i class="fa-solid fa-toggle-on"></i>';
+      document.getElementById('indicador-modo').className = 'status-badge-premium status-online';
+      document.getElementById('indicador-modo').textContent = 'Prendido';
       intervaloRefresh = setInterval(refrescarSesion, 30 * 60 * 1000);
       try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
       iniciarSuscripcionRealtime();
-      Mensaje.mostrar('🟢 Modo conductor activado.', 'exito');
+      Mensaje.mostrar('🟢 Sistema activado. No se apagará la pantalla del teléfono mientras manejas.', 'exito');
     }
+    
     async function desactivarModoConductor() {
       modoConductorActivo = false;
-      document.getElementById('btn-modo-conductor').classList.remove('active');
-      document.getElementById('indicador-modo').className = 'modo-indicador modo-inactivo';
-      document.getElementById('indicador-modo').textContent = '🔴 En espera';
+      document.getElementById('btn-modo-conductor').className = 'icon-btn';
+      document.getElementById('btn-modo-conductor').innerHTML = '<i class="fa-solid fa-toggle-off"></i>';
+      document.getElementById('indicador-modo').className = 'status-badge-premium status-offline';
+      document.getElementById('indicador-modo').textContent = 'Apagado';
       if (intervaloRefresh) { clearInterval(intervaloRefresh); intervaloRefresh = null; }
       if (wakeLock) { await wakeLock.release(); wakeLock = null; }
       if (suscripcionRealtime) { sb.removeChannel(suscripcionRealtime); suscripcionRealtime = null; }
-      Mensaje.mostrar('🔴 Modo conductor desactivado.', 'exito');
+      Mensaje.mostrar('🔴 Sistema apagado. Dejarás de recibir alertas en vivo.', 'exito');
     }
+    
     async function refrescarSesion() {
       try {
         const { data, error } = await sb.auth.refreshSession();
         if (error) throw error;
         if (data.session) { authToken = data.session.access_token; localStorage.setItem('authToken', authToken); }
-      } catch (e) { Mensaje.mostrar('⚠️ Sesión expirada.', 'error'); await desactivarModoConductor(); setTimeout(() => logout(), 3000); }
+      } catch (e) { Mensaje.mostrar('⚠️ Tu llave de acceso caducó.', 'error'); await desactivarModoConductor(); setTimeout(() => logout(), 3000); }
     }
 
-    // ========== SUSCRIPCIÓN REALTIME ==========
     function iniciarSuscripcionRealtime() {
       suscripcionRealtime = sb.channel('servicios-tiempo-real')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'donaciones', filter: "estado=eq.ofrecida" }, payload => manejarNuevoServicio(payload.new, 'recoleccion'))
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'despachos', filter: "estado=eq.preparando" }, payload => manejarNuevoServicio(payload.new, 'distribucion'))
         .subscribe();
     }
+    
     function manejarNuevoServicio(servicio, tipo) {
       if (!perfilVoluntario?.lat || !perfilVoluntario?.lon) return;
       const sLat = tipo === 'recoleccion' ? servicio.lat_recogida : servicio.lat;
       const sLon = tipo === 'recoleccion' ? servicio.lon_recogida : servicio.lon;
       if (!sLat || !sLon) return;
       const dist = parseFloat(calcularDistancia(perfilVoluntario.lat, perfilVoluntario.lon, sLat, sLon));
-      if (dist > 10) return; // Solo dentro de 10 km
+      if (dist > 15) return; 
       contadorNuevosServicios++;
       document.getElementById('toast-notificacion').style.display = 'block';
-      document.getElementById('toast-notificacion').innerText = `🔔 Nuevo servicio a ${dist} km`;
-      setTimeout(() => { document.getElementById('toast-notificacion').style.display = 'none'; }, 5000);
-      const badge = document.getElementById('nav-badge-servicios');
-      if (badge) { badge.style.display = 'flex'; badge.textContent = contadorNuevosServicios; }
+      document.getElementById('toast-notificacion').innerHTML = `<i class="fa-solid fa-bell"></i> ⚡ ¡ALERTA! Nuevo viaje detectado a ${dist} km de ti`;
+      setTimeout(() => { document.getElementById('toast-notificacion').style.display = 'none'; }, 6000);
     }
 
-    // ========== FUNCIONES GENERALES ==========
     async function actualizarUbicacionGPS() {
-      if (!navigator.geolocation) { Mensaje.mostrar('GPS no soportado', 'error'); return; }
+      if (!navigator.geolocation) { Mensaje.mostrar('Tu teléfono no tiene GPS o está apagado', 'error'); return; }
+      const icon = document.querySelector('[onclick="actualizarUbicacionGPS()"] i');
+      if (icon) icon.className = 'fa-solid fa-spinner fa-spin';
       navigator.geolocation.getCurrentPosition(async pos => {
         const lat = pos.coords.latitude; const lon = pos.coords.longitude;
         try {
           await apiFetch('/api/perfil', { method: 'POST', body: JSON.stringify({ rol: perfil.rol, nombre: perfil.nombre_punto || perfil.nombre, telefono: perfil.telefono || '', lat, lon }) });
           perfil.lat = lat; perfil.lon = lon;
           if (perfilVoluntario) { perfilVoluntario.lat = lat; perfilVoluntario.lon = lon; }
-          Mensaje.mostrar('📍 Ubicación actualizada', 'exito');
-        } catch (e) { Mensaje.mostrar('❌ Error', 'error'); }
-      }, () => { Mensaje.mostrar('No se pudo obtener ubicación', 'error'); }, { enableHighAccuracy: true, timeout: 10000 });
+          Mensaje.mostrar('📍 Ubicación sincronizada con el mapa central', 'exito');
+          if (mapaServicios) mapaServicios.setView([lat, lon], 13);
+        } catch (e) { Mensaje.mostrar('❌ Error al registrar tu ubicación en la red', 'error'); }
+        finally { if (icon) icon.className = 'fa-solid fa-location-crosshairs'; }
+      }, () => { Mensaje.mostrar('El GPS tardó mucho en responder', 'error'); if (icon) icon.className = 'fa-solid fa-location-crosshairs'; }, { enableHighAccuracy: true, timeout: 10000 });
     }
 
     async function logout() {
       if (modoConductorActivo) await desactivarModoConductor();
-      if (confirm('¿Cerrar sesión?')) { await sb.auth.signOut(); localStorage.removeItem('authToken'); localStorage.removeItem('perfil'); window.location.href = '/login.html'; }
+      if (confirm('¿Deseas cerrar sesión del sistema de carreras?')) { await sb.auth.signOut(); localStorage.removeItem('authToken'); localStorage.removeItem('perfil'); window.location.href = '/login.html'; }
     }
 
     function mostrarSeccion(seccion) {
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
       document.getElementById('section-' + seccion).classList.add('active');
-      if (seccion === 'servicios') { contadorNuevosServicios = 0; const badge = document.getElementById('nav-badge-servicios'); if (badge) badge.style.display = 'none'; initMapaServicios(); cargarServicios(); }
+      if (seccion === 'servicios') { contadorNuevosServicios = 0; initMapaServicios(); cargarServicios(); }
       if (seccion === 'actividad') cargarActividad();
     }
 
@@ -296,7 +507,6 @@
       renderizarActividad();
     }
 
-    // ========== PERFIL ==========
     async function cargarDatos() {
       try {
         const res = await apiFetch('/api/voluntarios/mi-perfil');
@@ -315,7 +525,7 @@
       if (perfilVoluntario.lat && perfilVoluntario.lon) {
         document.getElementById('perfil-lat').value = perfilVoluntario.lat;
         document.getElementById('perfil-lon').value = perfilVoluntario.lon;
-        document.getElementById('perfil-coords').innerText = `${perfilVoluntario.lat}, ${perfilVoluntario.lon}`;
+        document.getElementById('perfil-coords').innerText = `Punto de Origen: LAT ${perfilVoluntario.lat.toFixed(5)} | LON ${perfilVoluntario.lon.toFixed(5)}`;
       }
     }
 
@@ -324,6 +534,9 @@
 
     document.getElementById('form-perfil').addEventListener('submit', async function(e) {
       e.preventDefault();
+      const submitBtn = document.getElementById('btn-guardar-perfil');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrándote en el sistema...';
       try {
         await apiFetch('/api/voluntarios', { method: 'POST', body: JSON.stringify({
           telefono: document.getElementById('perfil-telefono').value.trim(),
@@ -334,41 +547,49 @@
           lon: parseFloat(document.getElementById('perfil-lon').value),
           activo: true
         })});
-        Mensaje.mostrar('✅ Perfil actualizado', 'exito');
+        Mensaje.mostrar('✅ Ficha de Moto/Carro registrada con éxito', 'exito');
         cerrarModalPerfil();
         cargarServicios();
-      } catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
+      } catch (err) { Mensaje.mostrar('❌ Error en el registro: ' + err.message, 'error'); }
+      finally { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Activar Ficha en la Flota'; }
     });
 
-    function obtenerUbicacionGPS() {
-      if (!navigator.geolocation) return alert('GPS no soportado');
+    function obtenerUbicacionGPSPerfil() {
+      if (!navigator.geolocation) return alert('GPS inasequible');
+      const gpsBtn = document.getElementById('btn-gps-perfil');
+      gpsBtn.disabled = true;
+      gpsBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buscando señal de satélites...';
       navigator.geolocation.getCurrentPosition(pos => {
         document.getElementById('perfil-lat').value = pos.coords.latitude;
         document.getElementById('perfil-lon').value = pos.coords.longitude;
-        document.getElementById('perfil-coords').innerText = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
-      }, () => alert('No se pudo obtener ubicación'), { enableHighAccuracy: true, timeout: 10000 });
+        document.getElementById('perfil-coords').innerText = `Señal fija -> LAT: ${pos.coords.latitude.toFixed(6)} | LON: ${pos.coords.longitude.toFixed(6)}`;
+        gpsBtn.disabled = false;
+        gpsBtn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Fijar Coordenadas GPS del Teléfono';
+      }, () => { alert('No se pudo establecer la señal GPS de tu casa/base'); gpsBtn.disabled = false; gpsBtn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Fijar Coordenadas GPS del Teléfono'; }, { enableHighAccuracy: true, timeout: 10000 });
     }
 
-    // ========== MAPA UNIFICADO ==========
     function initMapaServicios() {
       if (mapaServicios) { mapaServicios.invalidateSize(); return; }
-      const coords = { lat: perfilVoluntario?.lat || 8.0, lon: perfilVoluntario?.lon || -66.0, zoom: perfilVoluntario?.lat ? 13 : 6 };
-      mapaServicios = L.map('mapa-servicios').setView([coords.lat, coords.lon], coords.zoom);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, referrerPolicy: 'strict-origin-when-cross-origin' }).addTo(mapaServicios);
+      const coords = { lat: perfilVoluntario?.lat || 10.48, lon: perfilVoluntario?.lon || -66.90, zoom: perfilVoluntario?.lat ? 13 : 6 };
+      mapaServicios = L.map('mapa-servicios', { zoomControl: true }).setView([coords.lat, coords.lon], coords.zoom);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapaServicios);
       if (perfilVoluntario?.lat && perfilVoluntario?.lon) {
-        L.circle([perfilVoluntario.lat, perfilVoluntario.lon], { radius: 10000, color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.05, weight: 1 }).addTo(mapaServicios);
-        L.marker([perfilVoluntario.lat, perfilVoluntario.lon], { icon: L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] }) }).addTo(mapaServicios).bindPopup('📍 Mi ubicación');
+        L.circle([perfilVoluntario.lat, perfilVoluntario.lon], { radius: 15000, color: '#2563eb', fillColor: '#2563eb', fillOpacity: 0.05, weight: 1 }).addTo(mapaServicios);
+        L.marker([perfilVoluntario.lat, perfilVoluntario.lon], { icon: L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] }) }).addTo(mapaServicios).bindPopup('📍 Estás Aquí');
       }
     }
 
-    // ========== SERVICIOS UNIFICADOS ==========
     async function cargarServicios() {
       const lista = document.getElementById('lista-servicios');
-      lista.innerHTML = '<div class="loading">Cargando...</div>';
+      lista.innerHTML = '<div class="loading"><i class="fa-solid fa-arrows-spin fa-spin"></i> Buscando viajes y encomiendas en la calle...</div>';
+      
+      if (abortController) abortController.abort();
+      abortController = new AbortController();
+
       try {
         const [recRes, disRes] = await Promise.all([
-          apiFetch('/api/voluntarios/donaciones-pendientes'),
-          apiFetch('/api/despachos/pendientes')
+          apiFetch('/api/voluntarios/donaciones-pendientes', { signal: abortController.signal }),
+          apiFetch('/api/despachos/pendientes', { signal: abortController.signal })
         ]);
         todosServicios = [
           ...(recRes.data || []).map(d => ({ ...d, tipo: 'recoleccion' })),
@@ -378,7 +599,7 @@
         paginaServicios = 1;
         renderizarServicios();
         actualizarMarcadores();
-      } catch { lista.innerHTML = '<div class="empty-state">Error al cargar servicios</div>'; }
+      } catch (err) { if (err.name !== 'AbortError') lista.innerHTML = '<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i> Error de señal de red. Intenta refrescar el navegador.</div>'; }
     }
 
     function ordenarServicios() {
@@ -404,7 +625,7 @@
           const color = s.tipo === 'recoleccion' ? 'orange' : 'blue';
           const m = L.marker([lat, lon], {
             icon: L.icon({ iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`, shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] })
-          }).addTo(mapaServicios).bindPopup(`<b>${s.tipo === 'recoleccion' ? 'Recolección' : 'Distribución'}</b><br>${s.distancia < 999 ? 'A ' + s.distancia + ' km' : ''}`);
+          }).addTo(mapaServicios).bindPopup(`<b>${s.tipo === 'recoleccion' ? 'Buscar Carga' : 'Llevar Ayuda'}</b><br>${s.distancia < 999 ? 'A ' + s.distancia + ' km' : ''}`);
           m.on('click', () => { const idx = todosServicios.indexOf(s); if (idx >= 0) toggleExpandir(idx); });
           marcadoresServicios.push(m);
         }
@@ -421,7 +642,7 @@
       if (filtro === 'recolecciones') datos = datos.filter(s => s.tipo === 'recoleccion');
       else if (filtro === 'distribuciones') datos = datos.filter(s => s.tipo === 'distribucion');
 
-      if (datos.length === 0) { lista.innerHTML = '<div class="empty-state">No hay servicios disponibles</div>'; document.getElementById('paginacion-servicios').style.display = 'none'; return; }
+      if (datos.length === 0) { lista.innerHTML = '<div class="empty-state"><i class="fa-solid fa-road-barrier"></i> No se hallaron viajes libres en esta zona por el momento</div>'; document.getElementById('paginacion-servicios').style.display = 'none'; return; }
       const totalPaginas = Math.ceil(datos.length / ITEMS_POR_PAGINA);
       if (paginaServicios > totalPaginas) paginaServicios = totalPaginas;
       if (paginaServicios < 1) paginaServicios = 1;
@@ -436,43 +657,57 @@
       const reciente = esReciente(s.creado_en);
       const items = s.tipo === 'recoleccion' ? (s.detalle_donacion || []) : (s.items_despachados || []);
       const resumenItems = items.slice(0, 3).map(i => i.cantidad + ' ' + escapar(i.unidad || '') + ' de ' + escapar(i.catalogo_items?.nombre_generico || i.detalle || 'Insumo')).join(', ');
-      const totalItems = items.length > 3 ? ` y ${items.length - 3} más` : '';
+      const totalItems = items.length > 3 ? ` y ${items.length - 3} cajas más` : '';
+      
+      const lat = s.tipo === 'recoleccion' ? s.lat_recogida : s.necesidades?.lat;
+      const lon = s.tipo === 'recoleccion' ? s.lon_recogida : s.necesidades?.lon;
+
       return `
         <div class="servicio-item ${s.tipo} ${urgente ? 'urgente' : ''}" id="servicio-${idx}" onclick="toggleExpandir(${idx})">
           <div class="servicio-header">
-            <span class="servicio-tipo">${s.tipo === 'recoleccion' ? '📦 Recolección' : '🚚 Distribución'}</span>
-            <span class="servicio-distancia">${s.distancia < 999 ? 'A ' + s.distancia + ' km' : 'Distancia desconocida'}</span>
+            <span class="servicio-tipo">${s.tipo === 'recoleccion' ? '📦 BUSCAR DONACIÓN (RECOGIDA)' : '🚚 LLEVAR AYUDA (ENTREGA)'}</span>
+            <span class="servicio-distancia">${s.distancia < 999 ? 'A ' + s.distancia + ' KM' : 'CALCULANDO'}</span>
           </div>
-          <div class="servicio-detalle">📍 ${escapar(s.tipo === 'recoleccion' ? (s.direccion_recogida || 'Sin dirección') : (s.necesidades?.punto || 'Sin dirección'))}</div>
-          <div class="servicio-detalle">📦 ${totalItems} producto(s): ${resumenItems}${totalItems}</div>
-          <div class="servicio-detalle">🕐 hace ${Math.round((Date.now() - new Date(s.creado_en).getTime()) / 60000)} min ${urgente ? '<span class="badge badge-urgente">Urgente</span>' : ''} ${reciente ? '<span class="badge badge-reciente">Reciente</span>' : ''}</div>
+          <div class="servicio-linea-info"><i class="fa-solid fa-location-dot" style="color:var(--color-rojo-alerta);"></i> <b>Dirección exacta:</b> ${escapar(s.tipo === 'recoleccion' ? (s.direccion_recogida || 'No indicada') : (s.necesidades?.punto || 'Hospital/Refugio'))}</div>
+          <div class="servicio-linea-info"><i class="fa-solid fa-boxes-stacked" style="color:var(--color-azul-yummy);"></i> <b>Productos a bordo:</b> ${resumenItems}${totalItems}</div>
+          <div class="servicio-linea-info"><i class="fa-solid fa-clock" style="color:var(--text-muted);;"></i> <b>Tiempo en espera:</b> Hace ${Math.round((Date.now() - new Date(s.creado_en).getTime()) / 60000)} min ${urgente ? '<span class="badge badge-urgente"><i class="fa-solid fa-triangle-exclamation"></i> Urgente</span>' : ''} ${reciente ? '<span class="badge badge-reciente"><i class="fa-solid fa-sparkles"></i> Nuevo</span>' : ''}</div>
           <div class="servicio-expand">
-            <strong>Detalle completo:</strong>
-            <ul style="margin:8px 0; padding-left:20px;">${items.map(i => `<li>${i.cantidad} ${escapar(i.unidad || '')} de ${escapar(i.catalogo_items?.nombre_generico || i.detalle || 'Insumo')}</li>`).join('')}</ul>
-            ${s.tipo === 'recoleccion' ? `<p>👤 Donante: ${escapar(s.perfiles?.nombre_punto || 'Anónimo')} | 📞 ${escapar(s.perfiles?.telefono || 'Sin teléfono')}</p>` : ''}
-            <button class="btn btn-accept" onclick="event.stopPropagation(); aceptarServicio('${s.id}', '${s.tipo}')">✅ Aceptar este servicio</button>
-            ${generarEnlaceNavegacion(s.tipo === 'recoleccion' ? s.lat_recogida : s.necesidades?.lat, s.tipo === 'recoleccion' ? s.lon_recogida : s.necesidades?.lon)}
+            <div class="manifest-premium-box">
+              <strong><i class="fa-solid fa-clipboard-list"></i> Guía Completa de Productos:</strong>
+              <ul style="margin-top:8px;">${items.map(i => `<li>${i.cantidad} ${escapar(i.unidad || '')} - ${escapar(i.catalogo_items?.nombre_generico || i.detalle || 'Insumo')}</li>`).join('')}</ul>
+            </div>
+            ${s.tipo === 'recoleccion' ? `<p style="font-size:14px; color:var(--text-muted); margin-bottom:12px;"><i class="fa-solid fa-user"></i> Persona que dona: ${escapar(s.perfiles?.nombre_punto || 'Anónimo')} | <i class="fa-solid fa-phone"></i> Teléfono: ${escapar(s.perfiles?.telefono || 'N/A')}</p>` : ''}
+            <button class="btn btn-success" id="btn-aceptar-${s.id}" onclick="event.stopPropagation(); aceptarServicio('${s.id}', '${s.tipo}')">
+              <i class="fa-solid fa-motorcycle"></i> Aceptar Viaje y Agarrar Ruta
+            </button>
+            ${generarEnlaceNavegacion(lat, lon)}
           </div>
         </div>`;
     }
 
     function toggleExpandir(idx) {
-      document.querySelectorAll('.servicio-item').forEach(el => el.classList.remove('expandido'));
-      document.getElementById('servicio-' + idx)?.classList.add('expandido');
+      const el = document.getElementById('servicio-' + idx);
+      const expandido = el?.classList.contains('expandido');
+      document.querySelectorAll('.servicio-item').forEach(item => item.classList.remove('expandido'));
+      if (!expandido && el) el.classList.add('expandido');
     }
 
     window.aceptarServicio = async function(id, tipo) {
-      if (!perfilVoluntario) return alert('Complete su perfil primero');
-      if (!confirm(`¿Confirma que ${tipo === 'recoleccion' ? 'recogerá esta donación' : 'distribuirá este despacho'}?`)) return;
+      if (!perfilVoluntario) return alert('Debes guardar tu Ficha de Moto/Carro antes de agarrar una carrera');
+      if (!confirm(`¿Estás seguro de que deseas comprometerte y hacer este viaje de ${tipo === 'recoleccion' ? 'recogida' : 'entrega'}?`)) return;
+      
+      const btn = document.getElementById(`btn-aceptar-${id}`);
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando viaje en tu cuenta...'; }
+
       try {
         if (tipo === 'recoleccion') {
           await apiFetch('/api/entregas', { method: 'POST', body: JSON.stringify({ idempotencyKey: generarUUID(), voluntario_telefono: perfilVoluntario.telefono, donacion_id: id, tipo_servicio: 'recoleccion' }) });
         } else {
           await apiFetch('/api/despachos/' + id, { method: 'PATCH', body: JSON.stringify({ estado: 'en_transito_a_destino' }) });
         }
-        Mensaje.mostrar('✅ Servicio aceptado. Ve a Mi Actividad para seguimiento.', 'exito');
+        Mensaje.mostrar('✅ Carrera asignada. Revisa la pestaña Mis Viajes para iniciar el GPS.', 'exito');
         cargarServicios();
-      } catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
+      } catch (e) { Mensaje.mostrar('❌ Error de conexión: ' + e.message, 'error'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-motorcycle"></i> Aceptar Viaje y Agarrar Ruta'; } }
     };
 
     function cambiarPagina(tipo, direccion) {
@@ -485,69 +720,92 @@
       if (!div) return;
       if (totalPaginas <= 1) { div.style.display = 'none'; return; }
       div.style.display = 'flex';
-      div.innerHTML = `<button class="btn btn-outline btn-sm" ${paginaActual===1?'disabled':''} onclick="cambiarPagina('${tipo}', -1)">← Anterior</button><span>Página ${paginaActual} de ${totalPaginas}</span><button class="btn btn-outline btn-sm" ${paginaActual===totalPaginas?'disabled':''} onclick="cambiarPagina('${tipo}', 1)">Siguiente →</button>`;
+      div.innerHTML = `<button class="btn btn-primary" style="width:50px; height:40px; padding:0;" ${paginaActual===1?'disabled':''} onclick="cambiarPagina('${tipo}', -1)"><i class="fa-solid fa-arrow-left"></i></button><span style="font-weight:700;">${paginaActual} de ${totalPaginas}</span><button class="btn btn-primary" style="width:50px; height:40px; padding:0;" ${paginaActual===totalPaginas?'disabled':''} onclick="cambiarPagina('${tipo}', 1)"><i class="fa-solid fa-arrow-right"></i></button>`;
     }
 
-    // ========== MI ACTIVIDAD ==========
     async function cargarActividad() {
-      if (!perfilVoluntario) { cargarDatos(); return; }
+      if (!perfilVoluntario) { await cargarDatos(); if (!perfilVoluntario) return; }
       const lista = document.getElementById('lista-actividad');
-      lista.innerHTML = '<div class="loading">Cargando...</div>';
+      lista.innerHTML = '<div class="loading"><i class="fa-solid fa-rotate fa-spin"></i> Conectando al historial logístico...</div>';
       try {
         const res = await apiFetch('/api/entregas?voluntario=' + encodeURIComponent(perfilVoluntario.telefono));
         const todas = res.data || [];
         serviciosActivos = todas.filter(e => !['entregada', 'cancelada'].includes(e.estado));
         historialCompletado = todas.filter(e => ['entregada', 'cancelada'].includes(e.estado));
         renderizarActividad();
-      } catch { lista.innerHTML = '<div class="empty-state">Error al cargar actividad</div>'; }
+      } catch { lista.innerHTML = '<div class="empty-state"><i class="fa-solid fa-id-card"></i> Falló el enlace de datos.</div>'; }
     }
 
     function renderizarActividad() {
       const lista = document.getElementById('lista-actividad');
       const datos = subTabActiva === 'activos' ? serviciosActivos : historialCompletado;
       const pagina = subTabActiva === 'activos' ? paginaActividad : paginaHistorial;
-      if (datos.length === 0) { lista.innerHTML = '<div class="empty-state">No hay servicios ' + (subTabActiva === 'activos' ? 'activos' : 'en el historial') + '</div>'; document.getElementById('paginacion-actividad').style.display = 'none'; return; }
+      
+      if (datos.length === 0) { lista.innerHTML = '<div class="empty-state"><i class="fa-solid fa-clipboard"></i> No tienes carreras en este módulo actualmente</div>'; document.getElementById('paginacion-actividad').style.display = 'none'; return; }
       const totalPaginas = Math.ceil(datos.length / ITEMS_POR_PAGINA);
       const pg = Math.min(Math.max(pagina, 1), totalPaginas);
+      
       if (subTabActiva === 'activos') paginaActividad = pg; else paginaHistorial = pg;
       const inicio = (pg - 1) * ITEMS_POR_PAGINA;
       const paginaDatos = datos.slice(inicio, inicio + ITEMS_POR_PAGINA);
-      lista.innerHTML = paginaDatos.map(e => {
+      
+      lista.innerHTML = paginaDatos.map((e, index) => {
         const tipo = e.tipo_servicio || 'desconocido';
         const estado = escapar(e.estado.replace(/_/g, ' '));
         const detalle = e.detalle;
         let info = '';
-        if (tipo === 'recoleccion' && detalle) info = escapar(detalle.direccion_recogida || 'Sin dirección');
-        else if (tipo === 'distribucion' && detalle) info = escapar(detalle.punto || 'Destino');
+        if (tipo === 'recoleccion' && detalle) info = escapar(detalle.direccion_recogida || 'Dirección no registrada');
+        else if (tipo === 'distribucion' && detalle) info = escapar(detalle.punto || 'Destino Humanitario');
+        
+        const lat = detalle?.lat_recogida || detalle?.lat;
+        const lon = detalle?.lon_recogida || detalle?.lon;
+
         return `<div class="entrega-item">
-          <div class="entrega-header"><strong>${tipo === 'recoleccion' ? 'Recolección' : 'Distribución'} #${escapar(e.id.substring(0,8))}</strong><span class="badge badge-${tipo==='recoleccion'?'recogida':'distribucion'}">${estado}</span></div>
-          <p style="font-size:13px;color:var(--text-muted);">📍 ${info}</p><p style="font-size:12px;color:#94a3b8;">📅 ${formatearFecha(e.fecha_creacion)}</p>
+          <div class="entrega-header"><strong>${tipo === 'recoleccion' ? '📦 RECOLECCIÓN ACTIVA' : '🚚 ENTREGA EN PROGRESO'}</strong><span class="badge badge-${tipo==='recoleccion'?'recogida':'distribucion'}">${estado}</span></div>
+          <p style="font-size:15px; margin-bottom:8px;"><i class="fa-solid fa-map-location-dot" style="color:var(--color-azul-yummy);"></i> <b>Dirección del viaje:</b> ${info}</p>
+          <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;"><i class="fa-solid fa-calendar-days"></i> Fecha de asignación: ${formatearFecha(e.fecha_creacion)}</p>
           ${subTabActiva === 'activos' ? `
-            ${generarEnlaceNavegacion(detalle?.lat_recogida || detalle?.lat, detalle?.lon_recogida || detalle?.lon)}
-            ${tipo === 'recoleccion' && detalle?.estado === 'asignada' ? `<button class="btn btn-success" style="margin-top:8px;" onclick="confirmarRecogida('${e.donacion_id}')">✅ Confirmar recogida</button>` : ''}
-            ${tipo === 'distribucion' && e.estado === 'en_transito_a_destino' ? `<button class="btn btn-success" style="margin-top:8px;" onclick="confirmarEntrega('${e.id}')">✅ Confirmar entrega</button>` : ''}
-            <button class="btn btn-danger" style="margin-top:4px;" onclick="cancelarServicio('${e.id}', '${tipo}')">🗑️ Cancelar</button>
+            ${generarEnlaceNavegacion(lat, lon)}
+            ${tipo === 'recoleccion' && e.estado === 'asignada' ? `<button class="btn btn-success" style="margin-top:10px;" id="btn-recoger-${e.id}" onclick="confirmarRecogida('${e.donacion_id}', '${e.id}')"><i class="fa-solid fa-box-open"></i> Ya tengo la Donación a bordo</button>` : ''}
+            ${tipo === 'distribucion' && e.estado === 'en_transito_a_destino' ? `<button class="btn btn-success" style="margin-top:10px;" id="btn-entregar-${e.id}" onclick="confirmarEntrega('${e.id}')"><i class="fa-solid fa-circle-check"></i> Confirmar Entrega en Destino</button>` : ''}
+            <button class="btn btn-danger" style="margin-top:6px;" id="btn-cancelar-${e.id}" onclick="cancelarServicio('${e.id}', '${tipo}')"><i class="fa-solid fa-hand-holding-hand"></i> Soltar Carrera / Dejar Viaje</button>
           ` : ''}
         </div>`;
       }).join('');
       actualizarPaginacion('actividad', totalPaginas, pg);
     }
 
-    window.confirmarRecogida = async function(donacionId) {
-      try { await apiFetch('/api/donaciones/' + donacionId + '/recoger', { method: 'PATCH' }); Mensaje.mostrar('✅ Recogida confirmada.', 'exito'); cargarActividad(); }
-      catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
+    window.confirmarRecogida = async function(donacionId, entregaId) {
+      const btn = document.getElementById(`btn-recoger-${entregaId}`);
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando carga en el camión/moto...'; }
+      try { 
+        await apiFetch('/api/donaciones/' + donacionId + '/recoger', { method: 'PATCH' }); 
+        Mensaje.mostrar('✅ Productos cargados en el vehículo. En ruta hacia el Centro de Acopio.', 'exito'); 
+        cargarActividad(); 
+      } catch (e) { Mensaje.mostrar('❌ Error de registro: ' + e.message, 'error'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-box-open"></i> Ya tengo la Donación a bordo'; } }
     };
+    
     window.confirmarEntrega = async function(entregaId) {
-      try { await apiFetch('/api/entregas/' + entregaId, { method: 'PATCH', body: JSON.stringify({ estado: 'entregada' }) }); Mensaje.mostrar('✅ Entrega confirmada.', 'exito'); cargarActividad(); }
-      catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
+      const btn = document.getElementById(`btn-entregar-${entregaId}`);
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cerrando viaje de ayuda...'; }
+      try { 
+        await apiFetch('/api/entregas/' + entregaId, { method: 'PATCH', body: JSON.stringify({ estado: 'entregada' }) }); 
+        Mensaje.mostrar('✅ ¡Viaje finalizado! Suministros entregados en el punto crítico.', 'exito'); 
+        cargarActividad(); 
+      } catch (e) { Mensaje.mostrar('❌ Error en el cierre del viaje: ' + e.message, 'error'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Confirmar Entrega en Destino'; } }
     };
+    
     window.cancelarServicio = async function(entregaId, tipo) {
-      if (!confirm('¿Cancelar este servicio?')) return;
-      try { await apiFetch('/api/entregas/' + entregaId, { method: 'PATCH', body: JSON.stringify({ estado: 'cancelada' }) }); Mensaje.mostrar('🗑️ Servicio cancelado.', 'exito'); cargarActividad(); }
-      catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
+      if (!confirm('¿Seguro que quieres soltar esta carrera? El viaje volverá al radar para que lo agarre otro motorizado.')) return;
+      const btn = document.getElementById(`btn-cancelar-${entregaId}`);
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Soltando viaje...'; }
+      try { 
+        await apiFetch('/api/entregas/' + entregaId, { method: 'PATCH', body: JSON.stringify({ estado: 'cancelada' }) }); 
+        Mensaje.mostrar('🗑️ Carrera cancelada. El viaje vuelve a estar libre en la calle.', 'exito'); 
+        cargarActividad(); 
+      } catch (e) { Mensaje.mostrar('❌ Error al soltar carrera: ' + e.message, 'error'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-hand-holding-hand"></i> Soltar Carrera / Dejar Viaje'; } }
     };
 
-    // ========== INICIALIZACIÓN ==========
     mostrarSeccion('servicios');
     cargarDatos();
   </script>

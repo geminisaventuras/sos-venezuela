@@ -34,10 +34,10 @@ class EntregaController {
     }
   }
 
-  async actualizar(req, res, next) {
+     async actualizar(req, res, next) {
     try {
       const { id } = req.params;
-      const { estado } = actualizarEstadoSchema.parse(req.body);
+      const { estado, motivo, descripcion } = actualizarEstadoSchema.parse(req.body);
 
       // IDOR: Solo el voluntario dueño de la entrega o super_admin pueden modificarla
       if (req.user.rol !== 'super_admin') {
@@ -61,11 +61,26 @@ class EntregaController {
       }
 
       const resultado = await this.service.actualizarEstado(id, estado);
+      
+      if (estado === 'cancelada' && motivo) {
+        await this.service.registrarIncidencia(id, req.user.sub, motivo, descripcion);
+      }
+      
       res.json({ success: true, data: resultado, traceId: req.traceId });
     } catch (error) {
       if (error.name === 'ZodError') {
         return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Datos inválidos', traceId: req.traceId, details: error.errors } });
       }
+      
+      // Manejar errores específicos de la RPC
+      const mensaje = error.message || '';
+      if (mensaje.includes('no encontrada')) {
+        return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'El viaje no existe o ya fue procesado.', traceId: req.traceId } });
+      }
+      if (mensaje.includes('estado final')) {
+        return res.status(409).json({ success: false, error: { code: 'CONFLICT', message: 'Este viaje ya fue cancelado o completado desde otro dispositivo.', traceId: req.traceId } });
+      }
+      
       next(error);
     }
   }
