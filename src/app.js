@@ -101,6 +101,7 @@ app.use('/api/inventario', inventarioRoutes)
 app.use('/api/despachos', despachosRoutes)
 app.use('/api/emergencias', emergenciasRoutes)
 
+
 app.use((err, req, res, next) => {
   console.error(`[${req.traceId}]`, err)
   const status = err.status || 500
