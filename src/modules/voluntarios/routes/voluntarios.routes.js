@@ -1,4 +1,4 @@
-﻿// @build: 2026-06-29.16-30-00 | id: B2-VOL-ROUTES-DONACIONES | desc: Rutas de voluntarios con endpoint de donaciones pendientes
+﻿// @build: 2026-07-01.12-45-00 | id: B2-VOL-ROUTES-V3 | desc: Agregada ruta GET /viaje-activo para obtener el viaje en curso del conductor desde BD
 const express = require('express');
 const router = express.Router();
 const VoluntarioRepository = require('../repositories/voluntario.repository');
@@ -12,6 +12,9 @@ const controller = new VoluntarioController(service);
 
 // Endpoint para liberar sesiones atrapadas (sin authMiddleware porque la sesión está bloqueada)
 router.post('/liberar-sesion', (req, res, next) => controller.liberarSesion(req, res, next));
+
+// ✅ NUEVA RUTA: Obtener viaje activo del conductor
+router.get('/viaje-activo', authMiddleware, roleMiddleware('voluntario'), (req, res, next) => controller.viajeActivo(req, res, next));
 
 router.post('/', authMiddleware, roleMiddleware('voluntario'), (req, res, next) => controller.registrar(req, res, next));
 router.get('/mi-perfil', authMiddleware, roleMiddleware('voluntario'), (req, res, next) => controller.miPerfil(req, res, next));

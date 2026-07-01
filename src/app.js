@@ -15,10 +15,12 @@ const catalogoRoutes = require('./modules/catalogo/routes/catalogo.routes')
 const perfilRoutes = require('./modules/perfil/routes/perfil.routes')
 const inventarioRoutes = require('./modules/inventario/routes/inventario.routes')
 const despachosRoutes = require('./modules/despachos/routes/despacho.routes')
+const emergenciasRoutes = require('./modules/emergencias/routes/emergencias.routes')
+
+
 
 const app = express()
 
-// CORS restrictivo: solo orígenes autorizados
 const allowedOrigins = [
   'http://localhost:3000',
   'https://192.168.1.152:3000',
@@ -27,7 +29,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir peticiones sin origen (server-to-server, Postman, curl)
     if (!origin) return callback(null, true)
     if (allowedOrigins.includes(origin)) {
       callback(null, true)
@@ -55,11 +56,9 @@ app.use(helmet({
   },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   crossOriginEmbedderPolicy: false,
-  upgradeInsecureRequests: false   // ← NUEVO: evita que el navegador intente usar HTTPS en desarrollo
+  upgradeInsecureRequests: false
 }))
 
-
-// Servir app.js dinámicamente con la URL del backend inyectada
 app.get('/app.js', (req, res) => {
   const fs = require('fs');
   const path = require('path');
@@ -70,13 +69,8 @@ app.get('/app.js', (req, res) => {
   res.send(content);
 });
 
-
-
-
-// JSON y límites
 app.use(express.json({ limit: '100kb' }))
 
-// Rate limit
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 1000,
@@ -85,22 +79,18 @@ const limiter = rateLimit({
 })
 app.use(limiter)
 
-// Trace ID
 app.use((req, res, next) => {
   req.traceId = uuidv4()
   res.set('X-Trace-Id', req.traceId)
   next()
 })
 
-// Archivos estáticos
 app.use(express.static(path.join(__dirname, '..', 'public')))
 
-// Ruta raíz
 app.get('/', (req, res) => {
   res.json({ mensaje: 'API de Ayuda ante Terremoto funcionando', version: '3.0.0' })
 })
 
-// Rutas de módulos
 app.use('/api/perfil', perfilRoutes)
 app.use('/api/catalogo', catalogoRoutes)
 app.use('/api/necesidades', necesidadesRoutes)
@@ -109,8 +99,8 @@ app.use('/api/donaciones', donacionesRoutes)
 app.use('/api/entregas', entregasRoutes)
 app.use('/api/inventario', inventarioRoutes)
 app.use('/api/despachos', despachosRoutes)
+app.use('/api/emergencias', emergenciasRoutes)
 
-// Manejo de errores
 app.use((err, req, res, next) => {
   console.error(`[${req.traceId}]`, err)
   const status = err.status || 500

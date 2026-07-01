@@ -1,4 +1,4 @@
-﻿<!-- // @build: 2026-07-01.04-00-00 | id: VOL-SPA-V8 | desc: Correcciones: viajes simultáneos (backend), botón maps centrado, panel visible, OSRM funcional -->
+﻿<!-- // @build: 2026-07-01.21-15-00 | id: VOL-SPA-V13 | desc: Panel de detalles compacto sin scroll, mejoras integradas -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -31,26 +31,25 @@
     .paginacion span { font-size: 14px; color: var(--text-muted); }
     .bottom-sheet.oculta { transform: translateY(100%); visibility: hidden; opacity: 0; }
 
-    /* Panel de detalles del viaje activo */
-   #panel-detalles-viaje {
-  position: fixed; bottom: 0; left: 0; right: 0; background: white;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
-  transform: translateY(calc(100% - 40px));
-  transition: transform 0.3s ease;
-  z-index: 1000;
-  padding: 12px 16px 16px; max-height: 55vh; overflow-y: auto;
-  pointer-events: none;          /* ← el panel cerrado no bloquea toques */
-}
-#panel-detalles-viaje.abierto {
-  transform: translateY(0);
-  pointer-events: auto;          /* ← al abrir, los elementos son tocables */
-}
-#panel-detalles-viaje #flecha-detalles {
-  pointer-events: auto;          /* ← la flecha siempre es tocable */
-}
+    #panel-detalles-viaje {
+      position: fixed; bottom: 0; left: 0; right: 0; background: white;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+      transform: translateY(calc(100% - 36px));
+      transition: transform 0.3s ease;
+      z-index: 1000;
+      padding: 8px 12px 12px;
+      max-height: 65vh; overflow-y: auto;
+      pointer-events: none;
+    }
+    #panel-detalles-viaje.abierto {
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    #panel-detalles-viaje #flecha-detalles {
+      pointer-events: auto;
+    }
 
-    /* Botón flotante Google Maps */
     .btn-flotante-maps {
       position: fixed; top: 75px; right: 12px; z-index: 2000;
       width: 44px; height: 44px; border-radius: 50%; background: white;
@@ -66,133 +65,115 @@
 </head>
 <body>
 
-  <!-- ========== BARRA SUPERIOR ========== -->
   <header class="header">
     <h1>SOS <span>Ruta</span></h1>
     <div class="header-actions">
-      <button class="icon-btn" id="btn-modo-conductor" onclick="VoluntarioState.toggleModo()" title="Modo Trabajo">
+      <button class="icon-btn" id="btn-modo-conductor" onclick="VoluntarioModoConductor.toggle()" title="Modo Trabajo">
         <i class="fa-solid fa-toggle-off"></i>
       </button>
-      <button class="icon-btn" id="btn-gps-header" onclick="VoluntarioState.actualizarGPS()" title="Sincronizar GPS">
+      <button class="icon-btn" id="btn-gps-header" onclick="VoluntarioGPS.actualizar()" title="Sincronizar GPS">
         <i class="fa-solid fa-location-crosshairs"></i>
       </button>
-      <button class="icon-btn" id="btn-cerrar-header" onclick="VoluntarioState.cerrarSesion()" title="Cerrar Sesión">
+      <button class="icon-btn" id="btn-cerrar-header" onclick="VoluntarioApp.cerrarSesion()" title="Cerrar Sesión">
         <i class="fa-solid fa-power-off"></i>
       </button>
       <div class="user-info">
         <p>Conductor</p>
         <strong id="voluntario-nombre">VL</strong>
       </div>
-      <div class="avatar" id="voluntario-avatar" onclick="VoluntarioState.router.navegar('perfil')">VL</div>
+      <div class="avatar" id="voluntario-avatar" onclick="VoluntarioRouter.navegar('perfil')">VL</div>
     </div>
   </header>
 
   <div style="max-width:100%; padding:0;">
     <div id="mensaje" class="mensaje" style="margin:8px 12px;"></div>
 
-    <!-- ========== VISTA 1: EXPLORAR SERVICIOS ========== -->
     <div id="vista-explorar" class="spa-vista active">
       <div id="mapa-servicios"></div>
       <div class="bottom-sheet" id="bottom-sheet">
         <div style="display:flex; gap:8px; padding:12px;">
-          <button class="btn btn-outline active btn-sm" id="filtro-todos" onclick="VoluntarioState.filtrarServicios('todos')">📋 Todos</button>
-          <button class="btn btn-outline btn-sm" id="filtro-recolecciones" onclick="VoluntarioState.filtrarServicios('recolecciones')">📦 Recolecciones</button>
-          <button class="btn btn-outline btn-sm" id="filtro-distribuciones" onclick="VoluntarioState.filtrarServicios('distribuciones')">🚚 Distribuciones</button>
+          <button class="btn btn-outline active btn-sm" id="filtro-todos" onclick="VoluntarioExplorar.filtrarServicios('todos')">📋 Todos</button>
+          <button class="btn btn-outline btn-sm" id="filtro-recolecciones" onclick="VoluntarioExplorar.filtrarServicios('recolecciones')">📦 Recolecciones</button>
+          <button class="btn btn-outline btn-sm" id="filtro-distribuciones" onclick="VoluntarioExplorar.filtrarServicios('distribuciones')">🚚 Distribuciones</button>
         </div>
         <div id="lista-servicios" style="padding:0 12px;"><div class="loading">Buscando viajes cercanos...</div></div>
         <div class="paginacion" id="paginacion-servicios" style="display:none;"></div>
       </div>
     </div>
 
-    <!-- ========== VISTA 2: VIAJE EN CURSO ========== -->
     <div id="vista-viaje-activo" class="spa-vista">
       <div id="mapa-viaje-activo"></div>
-
-      <!-- Botón flotante Google Maps -->
       <div class="btn-flotante-maps" id="btn-google-maps" title="Abrir en Google Maps" style="display:none;">
         <i class="fa-solid fa-paper-plane"></i>
       </div>
-
-      <!-- Panel de detalles -->
       <div id="panel-detalles-viaje">
-        <div style="text-align:center; margin-bottom:8px; cursor:pointer;" id="flecha-detalles">
-          <span>▲</span>
-        </div>
-               <div id="detalles-viaje-contenido" style="padding: 8px 0;">
+        <div style="text-align:center; margin-bottom:4px; cursor:pointer;" id="flecha-detalles"><span>▲</span></div>
+        <div id="detalles-viaje-contenido" style="padding: 2px 0; font-size: 13px;">
+         
+                   <!-- Cliente (donante o centro de acopio) -->
+          <div style="display:flex; align-items:center; gap:6px; padding: 5px 0;">
+            <i id="detalle-icono-cliente" class="fa-solid fa-circle-user" style="font-size:14px;"></i>
+            <span id="detalle-etiqueta-cliente" style="font-weight:600;">Nombre:</span>
+            <span id="detalle-cliente-nombre" style="flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+          </div>
           <!-- Origen -->
-          <div style="display:flex; align-items:flex-start; gap:12px; padding: 10px 0; border-bottom:1px solid var(--border);">
-            <div style="width:36px; height:36px; border-radius:50%; background:#dcfce7; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <i class="fa-solid fa-location-dot" style="color:#16a34a; font-size:16px;"></i>
-            </div>
-            <div style="flex:1;">
-              <div style="font-size:12px; color:var(--text-muted); margin-bottom:2px;">ORIGEN</div>
-              <div id="detalle-origen-nombre" style="font-weight:700; font-size:16px; color:var(--text-main);"></div>
-              <div id="detalle-origen-direccion" style="font-size:13px; color:var(--text-muted);"></div>
-            </div>
-          </div>
+<div style="display:flex; align-items:flex-start; gap:6px; padding: 5px 0;">
+  <i class="fa-solid fa-location-dot" style="color:#16a34a; font-size:14px; margin-top:2px;"></i><p>Origen:</p>
+  <div style="flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    <span style="font-weight:700;" id="detalle-origen-nombre"></span>
+    <span style="color:var(--text-muted); margin-left:4px;" id="detalle-origen-direccion"></span>
+  </div>
+</div>
           
-          <!-- Destino -->
-          <div style="display:flex; align-items:flex-start; gap:12px; padding: 10px 0; border-bottom:1px solid var(--border);">
-            <div style="width:36px; height:36px; border-radius:50%; background:#fee2e2; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <i class="fa-solid fa-flag-checkered" style="color:#dc2626; font-size:16px;"></i>
-            </div>
-            <div style="flex:1;">
-              <div style="font-size:12px; color:var(--text-muted); margin-bottom:2px;">DESTINO</div>
-              <div id="detalle-destino-nombre" style="font-weight:700; font-size:16px; color:var(--text-main);"></div>
-              <div id="detalle-destino-direccion" style="font-size:13px; color:var(--text-muted);"></div>
-            </div>
-          </div>
-          
+         <!-- Destino -->
+<div style="display:flex; align-items:flex-start; gap:6px; padding: 5px 0;">
+  <i class="fa-solid fa-flag-checkered" style="color:#dc2626; font-size:14px; margin-top:2px;"></i><p>Destino:</p>
+  <div style="flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    <span style="font-weight:700;" id="detalle-destino-nombre"></span>
+    <span style="color:var(--text-muted); margin-left:4px;" id="detalle-destino-direccion"></span>
+  </div>
+</div>
           <!-- Productos -->
-          <div style="display:flex; align-items:flex-start; gap:12px; padding: 10px 0; border-bottom:1px solid var(--border);">
-            <div style="width:36px; height:36px; border-radius:50%; background:#dbeafe; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <i class="fa-solid fa-box" style="color:#2563eb; font-size:16px;"></i>
+          <div style="display:flex; align-items:flex-start; gap:6px; padding: 5px 0;">
+            <i class="fa-solid fa-box" style="color:#2563eb; font-size:14px; margin-top:2px;"></i><p>Recursos:</p>
+            <div style="flex:1; min-width:0; font-weight:500;" id="detalle-productos"></div>
+          </div>
+          <!-- ETA, Duración, Distancia -->
+          <div style="display:flex; gap:4px; padding: 4px 0;">
+            <div style="flex:1; text-align:center; background:#f8fafc; border-radius:8px; padding:4px;">
+              <div style="font-size:10px; color:var(--text-muted);">⏱ ETA</div>
+              <div id="detalle-eta" style="font-weight:700; font-size:14px;">--</div>
             </div>
-            <div style="flex:1;">
-              <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">PRODUCTOS</div>
-              <div id="detalle-productos" style="font-size:14px; color:var(--text-main); line-height:1.4;"></div>
+            <div style="flex:1; text-align:center; background:#f8fafc; border-radius:8px; padding:4px;">
+              <div style="font-size:10px; color:var(--text-muted);">⏱ DURACIÓN</div>
+              <div id="detalle-temporizador" style="font-weight:700; font-size:14px;">00:00</div>
+            </div>
+            <div style="flex:1; text-align:center; background:#f8fafc; border-radius:8px; padding:4px;">
+              <div style="font-size:10px; color:var(--text-muted);">📏 DIST.</div>
+              <div id="detalle-distancia" style="font-weight:700; font-size:14px;">--</div>
             </div>
           </div>
-          
-          <!-- ETA -->
-          <div style="display:flex; align-items:center; gap:12px; padding: 10px 0; border-bottom:1px solid var(--border);">
-            <div style="width:36px; height:36px; border-radius:50%; background:#fef3c7; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <i class="fa-solid fa-clock" style="color:#d97706; font-size:16px;"></i>
-            </div>
-            <div style="flex:1;">
-              <div style="font-size:12px; color:var(--text-muted); margin-bottom:2px;">TIEMPO ESTIMADO</div>
-              <div id="detalle-eta" style="font-weight:700; font-size:18px; color:var(--accent);">Calculando...</div>
-            </div>
-          </div>
-          
           <!-- Botones de contacto -->
-          <div style="display:flex; gap:10px; margin-top:14px;">
-            <button class="btn btn-outline" id="btn-llamar" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px;">
-              <i class="fa-solid fa-phone"></i> Llamar
-            </button>
-            <button class="btn btn-outline" id="btn-whatsapp" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; background:#25D366; color:white; border-color:#25D366;">
-              <i class="fa-brands fa-whatsapp"></i> WhatsApp
-            </button>
+          <div style="display:flex; gap:6px; padding: 2px 0;">
+            <button class="btn btn-outline" id="btn-llamar" style="flex:1; padding:6px; font-size:13px;"><i class="fa-solid fa-phone"></i> Llamar</button>
+            <button class="btn btn-outline" id="btn-whatsapp" style="flex:1; padding:6px; font-size:13px; background:#25D366; color:white; border-color:#25D366;"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>
           </div>
         </div>
       </div>
-
-      <!-- Barra de acciones -->
       <div id="barra-acciones-viaje" style="position:fixed; bottom:0; left:0; right:0; background:white; border-top:1px solid var(--border); padding:12px 16px; display:flex; align-items:center; gap:12px; z-index:1000;">
         <button class="btn btn-success" id="btn-accion-principal" style="flex:1;">✅ Ya tengo la donación</button>
         <button class="btn btn-danger" id="btn-cancelar-viaje" style="flex:1;">🗑️ Cancelar</button>
       </div>
     </div>
 
-    <!-- ========== VISTA 3: MIS VIAJES ========== -->
     <div id="vista-mis-viajes" class="spa-vista">
       <div style="padding:16px;">
         <h2>📋 Mis Viajes</h2>
         <div id="retomar-viaje-container" style="display:none; margin-bottom:15px;">
-          <button class="btn btn-primary" onclick="VoluntarioState.router.navegar('viaje-activo')">🔄 Retomar viaje activo</button>
+          <button class="btn btn-primary" onclick="VoluntarioRouter.navegar('viaje-activo')">🔄 Retomar viaje activo</button>
         </div>
         <div class="form-group" style="margin-bottom:15px;">
-          <select id="filtro-estado-viajes" onchange="VoluntarioState.filtrarMisViajes(this.value)" style="width:100%;">
+          <select id="filtro-estado-viajes" onchange="VoluntarioMisViajes.cambiarFiltro(this.value)" style="width:100%;">
             <option value="activos">🟢 En curso</option>
             <option value="completados">✅ Completados</option>
             <option value="todos">📋 Todos</option>
@@ -203,7 +184,6 @@
       </div>
     </div>
 
-    <!-- ========== VISTA 4: PERFIL ========== -->
     <div id="vista-perfil" class="spa-vista">
       <div style="padding:16px;">
         <h2>👤 Mi Ficha de Transportista</h2>
@@ -212,674 +192,86 @@
     </div>
   </div>
 
-  <!-- ========== BARRA DE NAVEGACIÓN INFERIOR ========== -->
   <nav id="bottom-nav-voluntario"></nav>
 
-  <!-- ========== MODAL GENÉRICO ========== -->
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal" id="modal-contenido"></div>
   </div>
 
-  <!-- ========== SCRIPTS ========== -->
   <script src="app.js"></script>
   <script src="componentes/mensaje.js"></script>
   <script src="componentes/bottom-nav.js"></script>
   <script src="componentes/modal.js"></script>
   <script src="componentes/mapa-ubicacion.js"></script>
+  <script src="componentes/voluntario/utils.js?v=V13"></script>
+  <script src="componentes/voluntario/app-state.js?v=V13"></script>
+  <script src="componentes/voluntario/router.js?v=V13"></script>
+  <script src="componentes/voluntario/notificaciones.js?v=V13"></script>
+  <script src="componentes/voluntario/modo-conductor.js?v=V13"></script>
+  <script src="componentes/voluntario/cancelar-modal.js?v=V13"></script>
+  <script src="componentes/voluntario/explorar.js?v=V13"></script>
+  <script src="componentes/voluntario/viaje-activo.js?v=V13"></script>
+  <script src="componentes/voluntario/mis-viajes.js?v=V13"></script>
+  <script src="componentes/voluntario/perfil.js?v=V13"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
     // ================================================================
-    // PROTECCIÓN DE RUTA E INICIALIZACIÓN DE SUPABASE
+    // ENSAMBLADOR LIGERO — INICIALIZACIÓN
     // ================================================================
     if (!verificarSesion(['voluntario'])) throw new Error('Acceso denegado');
     const sb = supabase.createClient('https://kxqwxiolouhrwddaqynp.supabase.co', 'sb_publishable_iJt58cRTDAYH_j_Mv1bJ4g_g0HdRlBF');
     Mensaje.init('mensaje');
     Modal.init('modal-overlay', 'modal-contenido');
 
-    // ================================================================
-    // ESTADO GLOBAL DE LA SPA
-    // ================================================================
-    window.VoluntarioState = {
-      vistaActual: 'explorar',
-      perfil: null,
-      perfilCargado: false,
-      modoConductor: false,
-      intervaloRefresh: null,
-      wakeLock: null,
-      suscripcionRealtime: null,
-      mapaServicios: null,
-      mapaViajeActivo: null,
-      marcadoresServicios: [],
-      todosServicios: [],
-      filtroActual: 'todos',
-      paginaServicios: 1,
-      ITEMS_POR_PAGINA: 5,
-      misViajes: [],
-      misViajesFiltro: 'activos',
-      viajeEnCurso: null,
-      watchId: null,
-      marcadorConductor: null,
-      rutaActual: null,
-      abortControllerOSRM: null,
+    window.toggleLista = function() {
+      const sheet = document.getElementById('bottom-sheet');
+      if (sheet) sheet.classList.toggle('oculta');
+    };
 
-      // ========== PERSISTENCIA DEL VIAJE EN LOCALSTORAGE ==========
-      guardarViaje() {
-        if (this.viajeEnCurso) {
-          localStorage.setItem('viajeEnCurso', JSON.stringify(this.viajeEnCurso));
+    window.VoluntarioApp = {
+      async cerrarSesion() {
+        if (confirm('¿Cerrar sesión?')) {
+          VoluntarioNotificaciones.limpiarSesion();
+          VoluntarioNotificaciones.limpiarEntrega();
+          if (VoluntarioStateCore.modoConductor) await VoluntarioModoConductor.toggle();
+          logout();
         }
-      },
-      cargarViajeGuardado() {
-        const guardado = localStorage.getItem('viajeEnCurso');
-        if (guardado) {
-          try {
-            this.viajeEnCurso = JSON.parse(guardado);
-            return true;
-          } catch(e) { localStorage.removeItem('viajeEnCurso'); }
-        }
-        return false;
-      },
-      limpiarViajeGuardado() {
-        localStorage.removeItem('viajeEnCurso');
-        this.viajeEnCurso = null;
-      },
+      }
+    };
 
-      // ========== ROUTER ==========
-      router: {
-        navegar(vista) {
-          if (VoluntarioState.viajeEnCurso && vista !== 'viaje-activo' && vista !== 'mis-viajes') {
-            Mensaje.mostrar('Complete o cancele el viaje activo antes de navegar.', 'error');
-            return;
-          }
-          document.querySelectorAll('.spa-vista').forEach(el => el.classList.remove('active'));
-          const destino = document.getElementById('vista-' + vista);
-          if (destino) {
-            destino.classList.add('active');
-            VoluntarioState.vistaActual = vista;
-            window.location.hash = vista;
-            if (vista === 'explorar') VoluntarioState.initExplorar();
-            else if (vista === 'viaje-activo') VoluntarioState.initViajeActivo();
-            else if (vista === 'mis-viajes') VoluntarioState.cargarMisViajes();
-            else if (vista === 'perfil') VoluntarioState.cargarPerfil();
-          }
-        },
-        init() {
-          if (VoluntarioState.cargarViajeGuardado()) {
-            this.navegar('viaje-activo');
-            return;
-          }
-          const hash = window.location.hash.replace('#', '') || 'explorar';
-          this.navegar(hash);
-          window.addEventListener('hashchange', () => {
-            this.navegar(window.location.hash.replace('#', '') || 'explorar');
-          });
-        }
-      },
-
-      // ========== BLOQUEO DE NAVEGACIÓN DURANTE VIAJE ACTIVO ==========
-      bloquearNavegacion() {
-        const bottomNav = document.getElementById('bottom-nav-voluntario');
-        if (bottomNav) bottomNav.style.display = 'none';
-        document.getElementById('btn-modo-conductor').style.display = 'none';
-        document.getElementById('btn-gps-header').style.display = 'none';
-        document.getElementById('btn-cerrar-header').style.display = 'none';
-      },
-      desbloquearNavegacion() {
-        const bottomNav = document.getElementById('bottom-nav-voluntario');
-        if (bottomNav) bottomNav.style.display = 'flex';
-        document.getElementById('btn-modo-conductor').style.display = '';
-        document.getElementById('btn-gps-header').style.display = '';
-        document.getElementById('btn-cerrar-header').style.display = '';
-      },
-
-      // ========== UTILIDADES ==========
-      calcularDistancia(lat1, lon1, lat2, lon2) {
-        const R = 6371;
-        const dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-        return parseFloat((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1));
-      },
-      escapeHTML(str) {
-        const div = document.createElement('div');
-        div.textContent = str || '';
-        return div.innerHTML;
-      },
-      calcularETA(origenLat, origenLon, destinoLat, destinoLon, vehiculo) {
-        const dist = this.calcularDistancia(origenLat, origenLon, destinoLat, destinoLon);
-        let velocidad = 30;
-        if (vehiculo === 'carro' || vehiculo === 'camioneta') velocidad = 25;
-        else if (vehiculo === 'bicicleta') velocidad = 12;
-        else if (vehiculo === 'a_pie') velocidad = 4;
-        const minutos = Math.round((dist / velocidad) * 60);
-        if (minutos < 1) return 'Menos de 1 min';
-        return `${minutos} min`;
-      },
-
-      // ========== MODO CONDUCTOR ==========
-      async toggleModo() {
-        if (this.viajeEnCurso) return;
-        this.modoConductor = !this.modoConductor;
-        const btn = document.getElementById('btn-modo-conductor');
-        if (this.modoConductor) {
-          btn.innerHTML = '<i class="fa-solid fa-toggle-on"></i>'; btn.classList.add('active');
-          try { this.wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
-          this.intervaloRefresh = setInterval(() => this.refrescarSesion(), 30 * 60 * 1000);
-          this.iniciarRealtime();
-          Mensaje.mostrar('🟢 Modo conductor activado. La pantalla no se apagará.', 'exito');
-        } else {
-          btn.innerHTML = '<i class="fa-solid fa-toggle-off"></i>'; btn.classList.remove('active');
-          if (this.wakeLock) { await this.wakeLock.release(); this.wakeLock = null; }
-          if (this.intervaloRefresh) { clearInterval(this.intervaloRefresh); this.intervaloRefresh = null; }
-          if (this.suscripcionRealtime) { sb.removeChannel(this.suscripcionRealtime); this.suscripcionRealtime = null; }
-          Mensaje.mostrar('🔴 Modo conductor desactivado', 'exito');
-        }
-      },
-      async refrescarSesion() {
-        try {
-          const { data, error } = await sb.auth.refreshSession();
-          if (error) throw error;
-          if (data.session) { authToken = data.session.access_token; localStorage.setItem('authToken', authToken); }
-        } catch (e) { Mensaje.mostrar('⚠️ Sesión expirada', 'error'); await this.toggleModo(); setTimeout(() => logout(), 3000); }
-      },
-      iniciarRealtime() {
-        this.suscripcionRealtime = sb.channel('servicios-tiempo-real')
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'donaciones', filter: "estado=eq.ofrecida" }, payload => {
-            if (this.vistaActual === 'explorar') this.cargarServicios();
-          })
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'despachos', filter: "estado=eq.preparando" }, payload => {
-            if (this.vistaActual === 'explorar') this.cargarServicios();
-          })
-          .subscribe();
-      },
-
-      // ========== GPS ==========
-      async actualizarGPS() {
-        if (this.viajeEnCurso) return;
+    window.VoluntarioGPS = {
+      async actualizar() {
+        if (VoluntarioStateCore.viajeEnCurso) return;
         if (!navigator.geolocation) { Mensaje.mostrar('GPS no disponible', 'error'); return; }
         navigator.geolocation.getCurrentPosition(async pos => {
           const lat = pos.coords.latitude, lon = pos.coords.longitude;
           try {
             await apiFetch('/api/perfil', { method: 'POST', body: JSON.stringify({ rol: 'voluntario', nombre: perfil.nombre_punto || perfil.nombre, telefono: perfil.telefono || '', lat, lon }) });
             perfil.lat = lat; perfil.lon = lon;
-            if (this.perfil) { this.perfil.lat = lat; this.perfil.lon = lon; }
+            if (VoluntarioStateCore.perfil) { VoluntarioStateCore.perfil.lat = lat; VoluntarioStateCore.perfil.lon = lon; }
             Mensaje.mostrar('📍 Ubicación sincronizada', 'exito');
-            if (this.mapaServicios) this.mapaServicios.setView([lat, lon], 13);
+            if (VoluntarioExplorar.mapaServicios) VoluntarioExplorar.mapaServicios.setView([lat, lon], 13);
           } catch (e) { Mensaje.mostrar('❌ Error al sincronizar GPS', 'error'); }
         }, () => { Mensaje.mostrar('No se pudo obtener ubicación', 'error'); }, { enableHighAccuracy: true, timeout: 10000 });
-      },
-
-      // ========== EXPLORAR SERVICIOS ==========
-      initExplorar() {
-        if (!this.mapaServicios) {
-          const coords = { lat: perfil.lat || 10.48, lon: perfil.lon || -66.90 };
-          this.mapaServicios = L.map('mapa-servicios').setView([coords.lat, coords.lon], 11);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(this.mapaServicios);
-          if (perfil.lat && perfil.lon) {
-            L.circle([perfil.lat, perfil.lon], { radius: 15000, color: '#2563eb', fillColor: '#2563eb', fillOpacity: 0.05, weight: 1 }).addTo(this.mapaServicios);
-          }
-        } else {
-          this.mapaServicios.invalidateSize();
-        }
-        this.cargarServicios();
-        document.getElementById('bottom-sheet')?.classList.add('oculta');
-        this.mapaServicios.on('click', () => {
-          const sheet = document.getElementById('bottom-sheet');
-          if (sheet && !sheet.classList.contains('oculta')) sheet.classList.add('oculta');
-        });
-      },
-      async cargarServicios() {
-        const lista = document.getElementById('lista-servicios');
-        lista.innerHTML = '<div class="loading">Conectando al radar de viajes...</div>';
-        try {
-          const [recRes, disRes] = await Promise.all([
-            apiFetch('/api/voluntarios/donaciones-pendientes'),
-            apiFetch('/api/despachos/pendientes')
-          ]);
-          this.todosServicios = [
-            ...(recRes.data || []).map(d => ({ ...d, tipo: 'recoleccion' })),
-            ...(disRes.data || []).map(d => ({ ...d, tipo: 'distribucion' }))
-          ];
-          this.paginaServicios = 1;
-          this.filtrarServicios(this.filtroActual);
-        } catch (e) { lista.innerHTML = '<div class="empty-state">Error de conexión. Intente recargar.</div>'; }
-      },
-      filtrarServicios(filtro) {
-        this.filtroActual = filtro;
-        this.paginaServicios = 1;
-        document.querySelectorAll('#bottom-sheet .btn-outline').forEach(b => b.classList.remove('active'));
-        document.getElementById('filtro-' + filtro)?.classList.add('active');
-        let datos = this.todosServicios;
-        if (filtro === 'recolecciones') datos = datos.filter(s => s.tipo === 'recoleccion');
-        else if (filtro === 'distribuciones') datos = datos.filter(s => s.tipo === 'distribucion');
-        if (this.perfil?.lat && this.perfil?.lon) {
-          datos.forEach(s => {
-            const lat = s.tipo === 'recoleccion' ? s.lat_recogida : s.necesidades?.lat;
-            const lon = s.tipo === 'recoleccion' ? s.lon_recogida : s.necesidades?.lon;
-            s._distancia = (lat && lon) ? this.calcularDistancia(this.perfil.lat, this.perfil.lon, lat, lon) : 999;
-          });
-          datos.sort((a, b) => a._distancia - b._distancia);
-        }
-        this.renderizarListaServicios(datos);
-        this.actualizarMarcadores(datos);
-      },
-      renderizarListaServicios(datos) {
-        const lista = document.getElementById('lista-servicios');
-        if (!datos.length) { lista.innerHTML = '<div class="empty-state">Sin viajes disponibles en esta categoría</div>'; document.getElementById('paginacion-servicios').style.display = 'none'; return; }
-        const totalPaginas = Math.ceil(datos.length / this.ITEMS_POR_PAGINA);
-        if (this.paginaServicios > totalPaginas) this.paginaServicios = totalPaginas;
-        if (this.paginaServicios < 1) this.paginaServicios = 1;
-        const inicio = (this.paginaServicios - 1) * this.ITEMS_POR_PAGINA;
-        const pagina = datos.slice(inicio, inicio + this.ITEMS_POR_PAGINA);
-        lista.innerHTML = pagina.map(s => this.renderizarTarjetaServicio(s)).join('');
-        const pagDiv = document.getElementById('paginacion-servicios');
-        if (totalPaginas > 1) {
-          pagDiv.style.display = 'flex';
-          pagDiv.innerHTML = `<button class="btn btn-outline btn-sm" ${this.paginaServicios===1?'disabled':''} onclick="VoluntarioState.cambiarPaginaServicios(-1)">←</button><span>${this.paginaServicios} / ${totalPaginas}</span><button class="btn btn-outline btn-sm" ${this.paginaServicios===totalPaginas?'disabled':''} onclick="VoluntarioState.cambiarPaginaServicios(1)">→</button>`;
-        } else { pagDiv.style.display = 'none'; }
-      },
-      cambiarPaginaServicios(dir) { this.paginaServicios += dir; this.filtrarServicios(this.filtroActual); },
-      renderizarTarjetaServicio(s) {
-        const distancia = s._distancia || 999;
-        const items = s.tipo === 'recoleccion' ? (s.detalle_donacion || []) : (s.items_despachados || []);
-        const resumen = items.slice(0, 3).map(i => `${i.cantidad} ${i.unidad || ''} ${this.escapeHTML(i.catalogo_items?.nombre_generico || i.detalle || 'Insumo')}`).join(', ');
-        const direccion = this.escapeHTML(s.tipo === 'recoleccion' ? (s.direccion_recogida || 'Sin dirección') : (s.necesidades?.punto || 'Destino'));
-        const urgente = (Date.now() - new Date(s.creado_en).getTime()) > 2 * 60 * 60 * 1000;
-        return `
-          <div class="servicio-item ${s.tipo} ${urgente ? 'urgente' : ''}" onclick="VoluntarioState.toggleExpandir(this)">
-            <div class="servicio-header"><span class="servicio-tipo">${s.tipo === 'recoleccion' ? '📦 RECOGER' : '🚚 ENTREGAR'}</span><span class="badge" style="background:var(--accent);color:white;">${distancia < 999 ? distancia + ' km' : 'N/A'}</span></div>
-            <div style="font-size:14px; margin:6px 0;">📍 ${direccion}</div>
-            <div style="font-size:13px; color:var(--text-muted);">📦 ${resumen}${items.length > 3 ? ' y más...' : ''}</div>
-            <div class="servicio-expand"><div class="manifest-premium-box"><strong>📋 Detalle completo:</strong><ul>${items.map(i => `<li>${i.cantidad} ${this.escapeHTML(i.unidad || '')} – ${this.escapeHTML(i.catalogo_items?.nombre_generico || i.detalle || 'Insumo')}</li>`).join('')}</ul></div>
-            <button class="btn btn-success btn-accion" onclick="event.stopPropagation(); VoluntarioState.aceptarViaje('${s.id}', '${s.tipo}')">✅ Aceptar Viaje</button></div>
-          </div>`;
-      },
-      toggleExpandir(el) {
-        const expandido = el.classList.contains('expandido');
-        document.querySelectorAll('.servicio-item').forEach(item => item.classList.remove('expandido'));
-        if (!expandido) el.classList.add('expandido');
-      },
-      actualizarMarcadores(datos) {
-        if (!this.mapaServicios) return;
-        this.marcadoresServicios.forEach(m => this.mapaServicios.removeLayer(m));
-        this.marcadoresServicios = [];
-        datos.forEach(s => {
-          const lat = s.tipo === 'recoleccion' ? s.lat_recogida : s.necesidades?.lat;
-          const lon = s.tipo === 'recoleccion' ? s.lon_recogida : s.necesidades?.lon;
-          if (lat && lon) {
-            const color = s.tipo === 'recoleccion' ? 'orange' : 'blue';
-            const marker = L.marker([lat, lon], { icon: L.icon({ iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`, shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] }) }).addTo(this.mapaServicios).bindPopup(`<b>${s.tipo === 'recoleccion' ? 'Recogida' : 'Entrega'}</b><br>${s._distancia < 999 ? s._distancia + ' km' : ''}`);
-            marker.on('click', () => { if (confirm(`¿Aceptar este viaje de ${s.tipo === 'recoleccion' ? 'recogida' : 'entrega'}?`)) { this.aceptarViaje(s.id, s.tipo); } });
-            this.marcadoresServicios.push(marker);
-          }
-        });
-        if (this.marcadoresServicios.length) this.mapaServicios.fitBounds(L.featureGroup(this.marcadoresServicios).getBounds().pad(0.1));
-      },
-
-      // ========== ACEPTAR VIAJE ==========
-      async aceptarViaje(id, tipo) {
-        if (this.viajeEnCurso) {
-          Mensaje.mostrar('Ya tienes un viaje activo. Finalízalo o cancélalo antes de aceptar otro.', 'error');
-          return;
-        }
-        if (!this.perfilCargado) { await this.cargarPerfil(); }
-        if (!this.perfil) { Mensaje.mostrar('Debe completar su ficha antes de aceptar viajes.', 'error'); this.router.navegar('perfil'); return; }
-        if (!this.perfil.nombre || !this.perfil.telefono || !this.perfil.tipo_vehiculo || !this.perfil.lat || !this.perfil.lon) { Mensaje.mostrar('Faltan datos obligatorios en su ficha.', 'error'); this.router.navegar('perfil'); return; }
-        if (!confirm(`¿Aceptar este viaje de ${tipo === 'recoleccion' ? 'recogida' : 'entrega'}?`)) return;
-        try {
-          let entregaId = null;
-          if (tipo === 'recoleccion') {
-            const res = await apiFetch('/api/entregas', { method: 'POST', body: JSON.stringify({ idempotencyKey: generarUUID(), voluntario_telefono: this.perfil.telefono, donacion_id: id, tipo_servicio: 'recoleccion' }) });
-            entregaId = res?.data?.id || null;
-          } else {
-            await apiFetch('/api/despachos/' + id, { method: 'PATCH', body: JSON.stringify({ estado: 'en_transito_a_destino' }) });
-            entregaId = id;
-          }
-          const servicio = this.todosServicios.find(s => s.id === id && s.tipo === tipo);
-          this.viajeEnCurso = { id, tipo, estado: tipo === 'recoleccion' ? 'asignada' : 'en_transito_a_destino', timestamp: Date.now(), entregaId };
-          if (servicio) {
-            if (tipo === 'recoleccion') {
-              this.viajeEnCurso.origen = { lat: servicio.lat_recogida, lon: servicio.lon_recogida, direccion: servicio.direccion_recogida || 'Dirección de recogida' };
-              this.viajeEnCurso.destino = { lat: this.perfil.lat, lon: this.perfil.lon, direccion: 'Centro de Acopio' };
-              this.viajeEnCurso.nombreOrigen = servicio.perfiles?.nombre_punto || 'Donante';
-              this.viajeEnCurso.nombreDestino = 'Centro de Acopio';
-              this.viajeEnCurso.telefonoOrigen = servicio.perfiles?.telefono || '';
-              this.viajeEnCurso.telefonoDestino = '';
-              this.viajeEnCurso.productos = (servicio.detalle_donacion || []).map(i => `${i.cantidad} ${i.unidad || ''} ${i.catalogo_items?.nombre_generico || i.detalle || 'Insumo'}`).join(', ');
-              this.viajeEnCurso.donacionId = servicio.id;
-            } else {
-              this.viajeEnCurso.origen = { lat: this.perfil.lat, lon: this.perfil.lon, direccion: 'Tu ubicación' };
-              this.viajeEnCurso.destino = { lat: servicio.necesidades?.lat, lon: servicio.necesidades?.lon, direccion: servicio.necesidades?.punto || 'Destino' };
-              this.viajeEnCurso.nombreOrigen = 'Tu ubicación';
-              this.viajeEnCurso.nombreDestino = servicio.necesidades?.punto || 'Destino';
-              this.viajeEnCurso.telefonoOrigen = '';
-              this.viajeEnCurso.telefonoDestino = servicio.necesidades?.contacto || '';
-              this.viajeEnCurso.productos = (servicio.items_despachados || []).map(i => `${i.cantidad} ${i.unidad || ''} ${i.catalogo_items?.nombre_generico || i.detalle || 'Insumo'}`).join(', ');
-              this.viajeEnCurso.despachoId = servicio.id;
-            }
-          }
-          this.guardarViaje();
-          Mensaje.mostrar('✅ Viaje aceptado. Ve a la ruta.', 'exito');
-          this.router.navegar('viaje-activo');
-          this.cargarServicios();
-        } catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
-      },
-
-      // ========== VIAJE EN CURSO (RUTA REAL, PANEL, ETA, BLOQUEO) ==========
-      initViajeActivo() {
-        if (!this.viajeEnCurso) { this.router.navegar('explorar'); return; }
-        
-        this.bloquearNavegacion();
-        
-        if (!this.mapaViajeActivo) {
-          const coords = this.viajeEnCurso.origen || { lat: perfil.lat || 10.48, lon: perfil.lon || -66.90 };
-          this.mapaViajeActivo = L.map('mapa-viaje-activo').setView([coords.lat, coords.lon], 14);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(this.mapaViajeActivo);
-        } else {
-          this.mapaViajeActivo.invalidateSize();
-        }
-        
-        this.mapaViajeActivo.eachLayer(layer => {
-          if (layer instanceof L.Marker || layer instanceof L.Polyline || layer instanceof L.GeoJSON) {
-            this.mapaViajeActivo.removeLayer(layer);
-          }
-        });
-        
-        const v = this.viajeEnCurso;
-        
-        if (v.origen?.lat && v.origen?.lon) {
-          L.marker([v.origen.lat, v.origen.lon], { icon: L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] }) }).addTo(this.mapaViajeActivo).bindPopup(`<b>Origen</b><br>${v.nombreOrigen || v.origen.direccion || ''}`);
-        }
-        if (v.destino?.lat && v.destino?.lon) {
-          L.marker([v.destino.lat, v.destino.lon], { icon: L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] }) }).addTo(this.mapaViajeActivo).bindPopup(`<b>Destino</b><br>${v.nombreDestino || v.destino.direccion || ''}`);
-        }
-        
-        // Polilínea recta inicial (respaldo)
-        if (v.origen?.lat && v.destino?.lat) {
-          this.rutaActual = L.polyline([[v.origen.lat, v.origen.lon], [v.destino.lat, v.destino.lon]], { color: '#2563eb', weight: 4, opacity: 0.7, dashArray: '10, 10' }).addTo(this.mapaViajeActivo);
-          this.mapaViajeActivo.fitBounds([[v.origen.lat, v.origen.lon], [v.destino.lat, v.destino.lon]], { padding: [50, 50] });
-          
-          // Intentar ruta real con OSRM (usando proxy CORS-friendly)
-          if (this.abortControllerOSRM) this.abortControllerOSRM.abort();
-          this.abortControllerOSRM = new AbortController();
-          const timeoutId = setTimeout(() => this.abortControllerOSRM.abort(), 5000);
-          
-          // Nuevo endpoint que permite CORS
-          fetch(`https://routing.openstreetmap.de/routed-car/route/v1/driving/${v.origen.lon},${v.origen.lat};${v.destino.lon},${v.destino.lat}?geometries=geojson&overview=full`, { signal: this.abortControllerOSRM.signal })
-            .then(r => r.json())
-            .then(data => {
-              clearTimeout(timeoutId);
-              if (data.routes?.length && data.routes[0].geometry) {
-                if (this.rutaActual) this.mapaViajeActivo.removeLayer(this.rutaActual);
-                this.rutaActual = L.geoJSON(data.routes[0].geometry, { style: { color: '#2563eb', weight: 5, opacity: 0.8 } }).addTo(this.mapaViajeActivo);
-                this.mapaViajeActivo.fitBounds(L.geoJSON(data.routes[0].geometry).getBounds().pad(0.1));
-              }
-            })
-            .catch(() => {
-              // Mantener la polilínea recta en caso de error
-            });
-        }
-        
-        // GPS en tiempo real
-        if (navigator.geolocation) {
-          this.watchId = navigator.geolocation.watchPosition(
-            pos => {
-              const lat = pos.coords.latitude, lon = pos.coords.longitude;
-              if (this.marcadorConductor) this.mapaViajeActivo.removeLayer(this.marcadorConductor);
-              this.marcadorConductor = L.marker([lat, lon], { icon: L.icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] }) }).addTo(this.mapaViajeActivo).bindPopup('📍 Tú estás aquí');
-              if (v.destino?.lat) {
-                const eta = this.calcularETA(lat, lon, v.destino.lat, v.destino.lon, this.perfil?.tipo_vehiculo);
-                const etaEl = document.getElementById('detalle-eta');
-                if (etaEl) etaEl.textContent = eta;
-              }
-            },
-            err => console.warn('GPS error:', err),
-            { enableHighAccuracy: true, maximumAge: 5000 }
-          );
-        }
-        
-        // Rellenar panel
-        document.getElementById('detalle-origen-nombre').textContent = v.nombreOrigen || 'Punto de recogida';
-        
-        document.getElementById('detalle-origen-direccion').textContent = v.origen?.direccion || '';
-        document.getElementById('detalle-destino-nombre').textContent = v.nombreDestino || 'Punto de entrega';
-        document.getElementById('detalle-destino-direccion').textContent = v.destino?.direccion || '';
-        document.getElementById('detalle-productos').textContent = v.productos || 'Sin productos';
-        document.getElementById('detalle-eta').textContent = 'Calculando...';        
-        // Botón de acción principal
-        const btnAccion = document.getElementById('btn-accion-principal');
-        if (v.tipo === 'recoleccion' && v.estado === 'asignada') {
-          btnAccion.textContent = '✅ Ya tengo la donación';
-          btnAccion.onclick = () => this.confirmarRecogida(v.donacionId, v.entregaId || '');
-        } else if (v.tipo === 'distribucion' || v.estado === 'en_transito_a_acopio') {
-          btnAccion.textContent = '✅ Confirmar Entrega';
-          btnAccion.onclick = () => this.confirmarEntrega(v.entregaId || v.despachoId);
-        }
-        
-        // Botón cancelar
-        document.getElementById('btn-cancelar-viaje').onclick = () => this.cancelarViaje(v.entregaId || v.despachoId || v.id);
-        
-        // Flecha del panel
-                // Flecha del panel
-                // Flecha del panel
-        const panel = document.getElementById('panel-detalles-viaje');
-        const barraAcciones = document.getElementById('barra-acciones-viaje');
-if (barraAcciones) {
-  const alturaBarra = barraAcciones.offsetHeight;
-  panel.style.bottom = alturaBarra + 'px';
-}
-        const flecha = document.getElementById('flecha-detalles');
-        let panelAbierto = false;
-        
-        // Forzar cerrado al iniciar la vista
-        panel.classList.remove('abierto');
-        flecha.querySelector('span').textContent = '▲';
-        
-        flecha.onclick = () => {
-          panelAbierto = !panelAbierto;
-          panel.classList.toggle('abierto', panelAbierto);
-          flecha.querySelector('span').textContent = panelAbierto ? '▼' : '▲';
-          setTimeout(() => this.mapaViajeActivo.invalidateSize(), 300);
-        };
-        // Botón Google Maps
-        const btnMaps = document.getElementById('btn-google-maps');
-        btnMaps.style.display = 'block';
-        btnMaps.onclick = () => {
-          if (v.destino?.lat) {
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${v.destino.lat},${v.destino.lon}`, '_blank');
-          }
-        };
-        
-        // Botones de contacto
-        const telefono = v.tipo === 'recoleccion' ? v.telefonoOrigen : v.telefonoDestino;
-        document.getElementById('btn-llamar').onclick = () => {
-          if (telefono) window.location.href = `tel:${telefono}`;
-          else Mensaje.mostrar('No hay teléfono disponible', 'error');
-        };
-        document.getElementById('btn-whatsapp').onclick = () => {
-          if (telefono) window.open(`https://wa.me/58${telefono.replace(/^0/, '')}`, '_blank');
-          else Mensaje.mostrar('No hay teléfono disponible', 'error');
-        };
-      },
-
-      // ========== SALIR DE VIAJE ACTIVO ==========
-      salirDeViajeActivo() {
-        if (this.watchId) { navigator.geolocation.clearWatch(this.watchId); this.watchId = null; }
-        if (this.marcadorConductor && this.mapaViajeActivo) this.mapaViajeActivo.removeLayer(this.marcadorConductor);
-        if (this.rutaActual && this.mapaViajeActivo) this.mapaViajeActivo.removeLayer(this.rutaActual);
-        if (this.abortControllerOSRM) this.abortControllerOSRM.abort();
-        document.getElementById('btn-google-maps').style.display = 'none';
-        document.getElementById('panel-detalles-viaje').classList.remove('abierto');
-        this.desbloquearNavegacion();
-        this.router.navegar('explorar');
-      },
-
-      // ========== MIS VIAJES ==========
-      async cargarMisViajes() {
-        if (!this.perfil) { await this.cargarPerfil(); if (!this.perfil) return; }
-        const lista = document.getElementById('lista-mis-viajes');
-        lista.innerHTML = '<div class="loading">Cargando historial...</div>';
-        try {
-          const res = await apiFetch('/api/entregas?voluntario=' + encodeURIComponent(this.perfil.telefono));
-          this.misViajes = res.data || [];
-          const retomarContainer = document.getElementById('retomar-viaje-container');
-          if (this.viajeEnCurso) retomarContainer.style.display = 'block';
-          else retomarContainer.style.display = 'none';
-          this.filtrarMisViajes(this.misViajesFiltro);
-        } catch (e) { lista.innerHTML = '<div class="empty-state">Error al cargar viajes</div>'; }
-      },
-      filtrarMisViajes(filtro) {
-        this.misViajesFiltro = filtro;
-        let datos = this.misViajes;
-        if (filtro === 'activos') datos = datos.filter(v => !['entregada', 'cancelada'].includes(v.estado));
-        else if (filtro === 'completados') datos = datos.filter(v => ['entregada', 'cancelada'].includes(v.estado));
-        this.renderizarMisViajes(datos);
-      },
-      renderizarMisViajes(datos) {
-        const lista = document.getElementById('lista-mis-viajes');
-        if (!datos.length) { lista.innerHTML = '<div class="empty-state">Sin viajes en esta categoría</div>'; document.getElementById('paginacion-mis-viajes').style.display = 'none'; return; }
-        const totalPaginas = Math.ceil(datos.length / this.ITEMS_POR_PAGINA);
-        let pagina = this.paginaServicios; if (pagina > totalPaginas) pagina = totalPaginas; if (pagina < 1) pagina = 1;
-        const inicio = (pagina - 1) * this.ITEMS_POR_PAGINA;
-        const paginaDatos = datos.slice(inicio, inicio + this.ITEMS_POR_PAGINA);
-        lista.innerHTML = paginaDatos.map(v => {
-          const esActivo = !['entregada', 'cancelada'].includes(v.estado);
-          const tipo = v.tipo_servicio === 'recoleccion' ? '📦 Recolección' : '🚚 Distribución';
-          const detalle = v.detalle || {};
-          const direccion = this.escapeHTML(v.tipo_servicio === 'recoleccion' ? (detalle.direccion_recogida || detalle.direccion || 'No registrada') : (detalle.punto || detalle.direccion || 'Destino'));
-          const lat = detalle.lat_recogida || detalle.lat;
-          const lon = detalle.lon_recogida || detalle.lon;
-          const enlaceNavegacion = (lat && lon) ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}" target="_blank" class="btn btn-outline btn-sm" style="margin-top:8px;"><i class="fa-solid fa-location-arrow"></i> Abrir en Mapas</a>` : '';
-          let acciones = '';
-          if (esActivo) {
-            if (v.tipo_servicio === 'recoleccion' && v.estado === 'asignada') { acciones += `<button class="btn btn-success btn-sm" onclick="VoluntarioState.confirmarRecogida('${v.donacion_id}', '${v.id}')" style="margin-top:6px;">✅ Ya tengo la donación</button>`; }
-            if (v.tipo_servicio === 'distribucion' && v.estado === 'en_transito_a_destino') { acciones += `<button class="btn btn-success btn-sm" onclick="VoluntarioState.confirmarEntrega('${v.id}')" style="margin-top:6px;">✅ Confirmar Entrega</button>`; }
-            acciones += `<button class="btn btn-danger btn-sm" onclick="VoluntarioState.cancelarViaje('${v.id}')" style="margin-top:6px;">🗑️ Cancelar Viaje</button>`;
-          }
-          return `<div class="entrega-item"><div class="entrega-header"><strong>${tipo}</strong><span class="badge badge-${v.estado === 'entregada' ? 'recibida' : v.estado === 'cancelada' ? 'cancelada' : 'en_transito'}">${this.escapeHTML(v.estado.replace(/_/g, ' '))}</span></div><p style="font-size:14px;">📍 ${direccion}</p><p style="font-size:12px; color:var(--text-muted);">📅 ${new Date(v.fecha_creacion).toLocaleString('es-VE')}</p>${acciones} ${enlaceNavegacion}</div>`;
-        }).join('');
-        const pagDiv = document.getElementById('paginacion-mis-viajes');
-        if (totalPaginas > 1) { pagDiv.style.display = 'flex'; pagDiv.innerHTML = `<button class="btn btn-outline btn-sm" ${pagina===1?'disabled':''} onclick="VoluntarioState.cambiarPaginaMisViajes(-1)">←</button><span>${pagina} / ${totalPaginas}</span><button class="btn btn-outline btn-sm" ${pagina===totalPaginas?'disabled':''} onclick="VoluntarioState.cambiarPaginaMisViajes(1)">→</button>`; }
-        else { pagDiv.style.display = 'none'; }
-      },
-      cambiarPaginaMisViajes(dir) { this.paginaServicios += dir; this.filtrarMisViajes(this.misViajesFiltro); },
-
-      async confirmarRecogida(donacionId, entregaId) {
-        try {
-          await apiFetch('/api/donaciones/' + donacionId + '/recoger', { method: 'PATCH' });
-          Mensaje.mostrar('✅ Recogida confirmada', 'exito');
-          if (this.viajeEnCurso) {
-            this.viajeEnCurso.estado = 'en_transito_a_acopio';
-            this.guardarViaje();
-            const btnAccion = document.getElementById('btn-accion-principal');
-            btnAccion.textContent = '✅ Confirmar Entrega';
-            btnAccion.onclick = () => this.confirmarEntrega(entregaId);
-          }
-          this.cargarMisViajes();
-        } catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
-      },
-      async confirmarEntrega(entregaId) {
-        try {
-          await apiFetch('/api/entregas/' + entregaId, { method: 'PATCH', body: JSON.stringify({ estado: 'entregada' }) });
-          Mensaje.mostrar('✅ Entrega confirmada. ¡Viaje completado!', 'exito');
-          this.limpiarViajeGuardado();
-          this.salirDeViajeActivo();
-          this.cargarMisViajes();
-        } catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
-      },
-
-      // ========== CANCELAR VIAJE ==========
-      async cancelarViaje(entregaId) {
-        const container = document.createElement('div');
-        container.innerHTML = `
-          <h3 style="margin-bottom:16px;">🗑️ Cancelar Viaje</h3>
-          <p style="color:var(--text-muted); margin-bottom:12px;">Seleccione el motivo de cancelación</p>
-          <div class="form-group"><label>Motivo *</label><select id="cancel-motivo" required><option value="">-- Seleccione --</option><option value="accidentado">Accidentado</option><option value="no_comunicacion">No me pude comunicar</option><option value="ubicacion_incorrecta">Ubicación incorrecta</option><option value="otro">Otro</option></select></div>
-          <div class="form-group" id="cancel-otro-group" style="display:none;"><label>Especifique *</label><textarea id="cancel-otro-texto" maxlength="500" rows="3" placeholder="Describa el motivo"></textarea></div>
-          <div style="display:flex; gap:10px; margin-top:16px;"><button id="modal-confirmar-cancel" class="btn btn-danger" style="flex:1;">Sí, cancelar viaje</button><button id="modal-cancelar-cancel" class="btn btn-outline" style="flex:1;">No cancelar</button></div>`;
-        Modal.abrir(container.innerHTML);
-        requestAnimationFrame(() => {
-          const motivoSelect = document.getElementById('cancel-motivo');
-          const otroGrupo = document.getElementById('cancel-otro-group');
-          const otroTexto = document.getElementById('cancel-otro-texto');
-          document.getElementById('cancel-motivo').addEventListener('change', function() { otroGrupo.style.display = this.value === 'otro' ? 'block' : 'none'; });
-          document.getElementById('modal-confirmar-cancel').onclick = async () => {
-            const motivo = motivoSelect.value;
-            if (!motivo) { alert('Seleccione un motivo'); return; }
-            let descripcion = '';
-            if (motivo === 'otro') { descripcion = otroTexto.value.trim(); if (!descripcion) { alert('Describa el motivo'); return; } }
-            Modal.cerrar();
-            try {
-              await apiFetch('/api/entregas/' + entregaId, { method: 'PATCH', body: JSON.stringify({ estado: 'cancelada', motivo: motivo, descripcion: descripcion || motivoSelect.options[motivoSelect.selectedIndex].text }) });
-              Mensaje.mostrar('🗑️ Viaje cancelado. Motivo registrado.', 'exito');
-              this.limpiarViajeGuardado();
-              this.salirDeViajeActivo();
-              this.cargarMisViajes();
-            } catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
-          };
-          document.getElementById('modal-cancelar-cancel').onclick = () => Modal.cerrar();
-        });
-      },
-
-      // ========== PERFIL ==========
-      async cargarPerfil() {
-        const div = document.getElementById('perfil-contenido');
-        div.innerHTML = '<div class="loading">Cargando perfil...</div>';
-        try {
-          const res = await apiFetch('/api/voluntarios/mi-perfil');
-          const perfilData = res.data;
-          const perfilCompleto = perfilData && perfilData.nombre && perfilData.telefono && perfilData.tipo_vehiculo && perfilData.lat && perfilData.lon;
-          this.perfilCargado = true;
-          if (!perfilCompleto) { this.perfil = null; div.innerHTML = '<div class="alert-aviso"><i class="fa-solid fa-triangle-exclamation"></i> Para aceptar viajes necesitas completar: nombre, teléfono, vehículo y ubicación base.</div><button class="btn btn-primary" onclick="VoluntarioState.mostrarFormularioPerfil()">📝 Completar Ficha</button>'; return; }
-          this.perfil = perfilData;
-          div.innerHTML = `<p><strong>Nombre:</strong> ${this.escapeHTML(this.perfil.nombre || '')}</p><p><strong>Teléfono:</strong> ${this.escapeHTML(this.perfil.telefono || '')}</p><p><strong>Vehículo:</strong> ${this.escapeHTML(this.perfil.tipo_vehiculo || '')}</p><p><strong>Capacidad de carga:</strong> ${this.escapeHTML(this.perfil.capacidad_carga || '')}</p><p><strong>📍 Ubicación base:</strong> ${this.perfil.lat ? this.perfil.lat.toFixed(5) + ', ' + this.perfil.lon.toFixed(5) : 'No configurada'}</p><button class="btn btn-primary" onclick="VoluntarioState.mostrarFormularioPerfil()">✏️ Editar Ficha</button>`;
-        } catch (e) { this.perfilCargado = true; div.innerHTML = '<div class="empty-state">Error al cargar perfil</div>'; }
-      },
-      mostrarFormularioPerfil() {
-        const p = this.perfil || {};
-        Modal.abrir(`<h3>${this.perfil ? 'Editar' : 'Crear'} Ficha de Transportista</h3><div class="form-group"><label>Nombre completo</label><input type="text" id="perfil-nombre" value="${this.escapeHTML(p.nombre || '')}" required></div><div class="form-group"><label>Teléfono</label><input type="tel" id="perfil-telefono" value="${this.escapeHTML(p.telefono || '')}" required pattern="[0-9]{7,15}"></div><div class="form-group"><label>Vehículo</label><select id="perfil-vehiculo"><option value="moto" ${p.tipo_vehiculo==='moto'?'selected':''}>🏍️ Moto</option><option value="carro" ${p.tipo_vehiculo==='carro'?'selected':''}>🚗 Carro</option><option value="camioneta" ${p.tipo_vehiculo==='camioneta'?'selected':''}>🚛 Camioneta</option><option value="bicicleta" ${p.tipo_vehiculo==='bicicleta'?'selected':''}>🚲 Bicicleta</option><option value="a_pie" ${p.tipo_vehiculo==='a_pie'?'selected':''}>🚶 A pie</option></select></div><div class="form-group"><label>Capacidad de carga</label><input type="text" id="perfil-capacidad" value="${this.escapeHTML(p.capacidad_carga || '')}" placeholder="Ej: 80 kg, 3 bultos"></div><div class="form-group"><label>📍 Ubicación base</label><button type="button" class="btn btn-outline btn-sm" id="btn-gps-perfil" onclick="VoluntarioState.obtenerGPSPerfil()"><i class="fa-solid fa-location-crosshairs"></i> Usar GPS</button><input type="hidden" id="perfil-lat" value="${p.lat || ''}"><input type="hidden" id="perfil-lon" value="${p.lon || ''}"><p id="perfil-coords" style="font-size:12px; color:var(--accent); margin-top:4px;">${p.lat ? p.lat.toFixed(5) + ', ' + p.lon.toFixed(5) : ''}</p></div><div style="display:flex; gap:10px; margin-top:16px;"><button id="modal-guardar-perfil" class="btn btn-primary" style="flex:1;">💾 Guardar</button><button id="modal-cancelar-perfil" class="btn btn-outline" style="flex:1;">Cancelar</button></div>`);
-        document.getElementById('modal-guardar-perfil').onclick = async () => {
-          const datos = { telefono: document.getElementById('perfil-telefono').value.trim(), nombre: document.getElementById('perfil-nombre').value.trim(), tipo_vehiculo: document.getElementById('perfil-vehiculo').value, capacidad_carga: document.getElementById('perfil-capacidad').value.trim(), lat: parseFloat(document.getElementById('perfil-lat').value) || null, lon: parseFloat(document.getElementById('perfil-lon').value) || null, activo: true };
-          try { await apiFetch('/api/voluntarios', { method: 'POST', body: JSON.stringify(datos) }); Mensaje.mostrar('✅ Ficha guardada', 'exito'); Modal.cerrar(); this.cargarPerfil(); }
-          catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
-        };
-        document.getElementById('modal-cancelar-perfil').onclick = () => Modal.cerrar();
-      },
-      toggleLista() {
-        const sheet = document.getElementById('bottom-sheet');
-        if (sheet) sheet.classList.toggle('oculta');
-      },
-      obtenerGPSPerfil() {
-        if (!navigator.geolocation) { alert('GPS no disponible'); return; }
-        const btn = document.getElementById('btn-gps-perfil');
-        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-        navigator.geolocation.getCurrentPosition(pos => {
-          document.getElementById('perfil-lat').value = pos.coords.latitude;
-          document.getElementById('perfil-lon').value = pos.coords.longitude;
-          document.getElementById('perfil-coords').innerText = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
-          btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Usar GPS';
-        }, () => { alert('No se pudo obtener ubicación'); btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Usar GPS'; }, { enableHighAccuracy: true, timeout: 10000 });
-      },
-      cerrarSesion() {
-        if (confirm('¿Cerrar sesión?')) { if (this.modoConductor) this.toggleModo(); logout(); }
       }
     };
 
-    // ================================================================
-    // INICIALIZACIÓN FINAL
-    // ================================================================
     document.getElementById('voluntario-nombre').innerText = (perfil.nombre_punto || 'VL').substring(0, 10);
     document.getElementById('voluntario-avatar').innerText = (perfil.nombre_punto || 'VL').substring(0, 2).toUpperCase();
+
     BottomNav.init({
       contenedorId: 'bottom-nav-voluntario',
       secciones: [
-        { id: 'toggle-lista', icono: 'fa-solid fa-list', label: 'Lista', accion: 'toggleLista' },
+        { id: 'toggle-lista', icono: 'fa-solid fa-list', label: 'Lista', accion: toggleLista },
         { id: 'explorar', icono: 'fa-solid fa-map-location-dot', label: 'Explorar', href: '#explorar' },
         { id: 'mis-viajes', icono: 'fa-solid fa-route', label: 'Mis Viajes', href: '#mis-viajes' }
       ],
-      onChange: (seccion) => { if (seccion !== 'toggle-lista') VoluntarioState.router.navegar(seccion); }
+      onChange: (seccion) => { if (seccion !== 'toggle-lista') VoluntarioRouter.navegar(seccion); }
     });
-    window.addEventListener('DOMContentLoaded', () => { VoluntarioState.router.init(); });
+
+    window.addEventListener('DOMContentLoaded', () => { VoluntarioRouter.init(); });
   </script>
 </body>
 </html>

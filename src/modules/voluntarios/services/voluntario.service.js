@@ -1,4 +1,4 @@
-﻿// @build: 2026-06-29.16-30-00 | id: B2-VOL-SERVICE-DONACIONES | desc: Servicio de voluntarios con método de donaciones pendientes
+﻿// @build: 2026-07-01.12-15-00 | id: B2-VOL-SERVICE-V3 | desc: Agregado obtenerViajeActivo para consultar la entrega activa del conductor
 class VoluntarioService {
   constructor(voluntarioRepository) {
     this.repository = voluntarioRepository;
@@ -19,6 +19,11 @@ class VoluntarioService {
 
   async obtenerDonacionesPendientes() {
     return this.repository.findDonacionesPendientes();
+  }
+
+  // ✅ NUEVO MÉTODO: Obtener viaje activo del conductor
+  async obtenerViajeActivo(telefono) {
+    return this.repository.findActiveDelivery(telefono);
   }
 }
 

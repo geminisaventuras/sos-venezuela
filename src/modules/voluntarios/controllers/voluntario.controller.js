@@ -1,4 +1,4 @@
-﻿// @build: 2026-06-29.16-30-00 | id: B2-VOL-CTRL-DONACIONES | desc: Controlador de voluntarios con endpoint de donaciones pendientes
+﻿// @build: 2026-07-01.12-30-00 | id: B2-VOL-CTRL-V3 | desc: Agregado método viajeActivo para obtener el viaje en curso del conductor desde BD
 const supabaseAdmin = require('../../../config/supabase');
 const { voluntarioSchema } = require('../schemas/voluntario.schema');
 
@@ -62,7 +62,27 @@ class VoluntarioController {
     }
   }
 
-    async liberarSesion(req, res, next) {
+  // ✅ NUEVO MÉTODO: Obtener el viaje activo del conductor desde la base de datos
+  async viajeActivo(req, res, next) {
+    try {
+      // Obtener el perfil del voluntario para saber su teléfono
+      const voluntario = await this.service.obtenerMiPerfil(req.user.sub);
+      if (!voluntario || !voluntario.telefono) {
+        return res.status(404).json({ success: false, error: { code: 'PERFIL_NO_ENCONTRADO', message: 'Perfil de conductor no encontrado', traceId: req.traceId } });
+      }
+
+      const viaje = await this.service.obtenerViajeActivo(voluntario.telefono);
+      if (!viaje) {
+        return res.status(404).json({ success: false, error: { code: 'SIN_VIAJE_ACTIVO', message: 'No tiene ningún viaje activo en este momento', traceId: req.traceId } });
+      }
+
+      res.json({ success: true, data: viaje });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async liberarSesion(req, res, next) {
     try {
       const authHeader = req.headers.authorization || req.headers.Authorization;
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -70,13 +90,11 @@ class VoluntarioController {
       }
       const token = authHeader.split(' ')[1];
 
-      // Validar token directamente (sin pasar por authMiddleware que bloquea sesiones atrapadas)
       const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
       if (error || !user) {
         return res.status(401).json({ success: false, error: { code: 'AUTH_INVALID', message: 'Token inválido o expirado' } });
       }
 
-      // Verificar que el usuario tenga rol voluntario
       const { data: perfil } = await supabaseAdmin
         .from('perfiles')
         .select('rol')
@@ -86,16 +104,17 @@ class VoluntarioController {
         return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Solo conductores pueden liberar sesión' } });
       }
 
-      // Limpiar el jti almacenado
+      const nuevoSessionId = req.body?.nuevo_session_id || null;
+
       const { error: updateError } = await supabaseAdmin
         .from('voluntarios')
-        .update({ ultimo_token_jti: null })
+        .update({ ultimo_token_jti: nuevoSessionId })
         .eq('user_id', user.id);
       if (updateError) {
         return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Error al liberar sesión' } });
       }
 
-      res.json({ success: true, message: 'Sesión liberada correctamente. Puede iniciar sesión de nuevo.' });
+      res.json({ success: true, message: 'Sesión liberada correctamente. Puede continuar.' });
     } catch (error) {
       next(error);
     }

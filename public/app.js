@@ -1,8 +1,10 @@
-﻿// @build: 2026-06-27.16-00-00 | id: PWA-UTILS | desc: Utilidades globales + cierre automático por sesión conflictiva + limpieza de viajeEnCurso
-//const API_BASE = 'https://sos-venezuela-backend.onrender.com'
+﻿// @build: 2026-06-30.22-30-00 | id: PWA-UTILS-V4 | desc: Utilidades globales + protección anti-bucle de sesión conflictiva + resolución sin recarga
 const API_BASE = '__API_BASE__'
 let authToken = localStorage.getItem('authToken')
 let perfil = JSON.parse(localStorage.getItem('perfil') || 'null')
+
+// 🔒 Protección anti-bucle: evita múltiples diálogos de conflicto simultáneos
+let _sesionConflictoEnProgreso = false
 
 window.setAuth = function(token, p) {
   authToken = token
@@ -16,7 +18,8 @@ window.logout = function() {
   perfil = null
   localStorage.removeItem('authToken')
   localStorage.removeItem('perfil')
-  localStorage.removeItem('viajeEnCurso')   // ← Limpiar viaje en curso al cerrar sesión
+  localStorage.removeItem('viajeEnCurso')
+  localStorage.removeItem('sessionId')
   window.location.href = '/login.html'
 }
 
@@ -26,7 +29,8 @@ window.apiFetch = async function(path, options = {}) {
   options.signal = controller.signal
   options.headers = { 'Content-Type': 'application/json', ...options.headers }
   if (authToken) options.headers['Authorization'] = 'Bearer ' + authToken
-  // W3C Trace Context
+  const sessionId = localStorage.getItem('sessionId')
+  if (sessionId) options.headers['X-Session-Id'] = sessionId
   const traceId = crypto.randomUUID().replace(/-/g, '')
   const spanId = traceId.substring(0, 16)
   options.headers['traceparent'] = `00-${traceId}-${spanId}-01`
@@ -36,13 +40,48 @@ window.apiFetch = async function(path, options = {}) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: { message: 'Error ' + res.status } }))
 
-      // Si la sesión fue usurpada por otro dispositivo, forzar cierre automático
       if (res.status === 401 && err.error?.code === 'SESSION_CONFLICT') {
+        // 🔒 Anti-bucle: si ya hay un diálogo de conflicto abierto, esperar y reintentar
+        if (_sesionConflictoEnProgreso) {
+          // Esperar 500ms y reintentar la petición (la otra instancia ya está resolviendo)
+          await new Promise(r => setTimeout(r, 500))
+          return window.apiFetch(path, options)
+        }
+
+        _sesionConflictoEnProgreso = true
+        const forzar = confirm('Sesión iniciada en otro dispositivo. ¿Desea cerrar la otra sesión y usar este dispositivo?')
+        
+        if (forzar) {
+          try {
+            // Enviar el sessionId actual para que el backend lo actualice directamente
+            const nuevoSessionId = localStorage.getItem('sessionId')
+            const liberarRes = await fetch(API_BASE + '/api/voluntarios/liberar-sesion', {
+              method: 'POST',
+              headers: { 
+                'Authorization': 'Bearer ' + authToken,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ nuevo_session_id: nuevoSessionId })
+            })
+            if (liberarRes.ok) {
+              _sesionConflictoEnProgreso = false
+              alert('Sesión liberada. Puede continuar.')
+              // Reintentar la petición original con el mismo sessionId
+              return window.apiFetch(path, options)
+            }
+          } catch (e) {
+            _sesionConflictoEnProgreso = false
+            alert('Error al liberar sesión. Intente de nuevo.')
+          }
+        }
+        
+        _sesionConflictoEnProgreso = false
         localStorage.removeItem('authToken')
         localStorage.removeItem('perfil')
         localStorage.removeItem('viajeEnCurso')
+        localStorage.removeItem('sessionId')
         window.location.href = '/login.html'
-        throw new Error('Sesión cerrada automáticamente. Inicie de nuevo.')
+        throw new Error('Sesión cerrada. Inicie de nuevo.')
       }
 
       throw new Error(err.error?.message || 'Error del servidor')

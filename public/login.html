@@ -1,4 +1,4 @@
-﻿<!-- // @build: 2026-06-30.12-00-00 | id: LOGIN-V2 | desc: Login y registro armonizados con el sistema de diseño unificado y componente MapaUbicacion -->
+﻿<!-- // @build: 2026-07-01.18-30-00 | id: LOGIN-V3 | desc: Login y registro con actualización de sessionId en BD para evitar falsos conflictos de sesión -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -82,20 +82,15 @@
     </div>
   </div>
 
-  <!-- SCRIPTS -->
   <script src="app.js"></script>
   <script src="componentes/mensaje.js"></script>
   <script src="componentes/mapa-ubicacion.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // ================================================================
-    // INICIALIZACIÓN
-    // ================================================================
     Mensaje.init('mensaje');
     const sb = supabase.createClient('https://kxqwxiolouhrwddaqynp.supabase.co', 'sb_publishable_iJt58cRTDAYH_j_Mv1bJ4g_g0HdRlBF');
 
-    // Mapa de ubicación para el registro
     MapaUbicacion.init({
       mapaContenedorId: 'mapa',
       inputDireccionId: 'buscarDireccion',
@@ -107,9 +102,6 @@
       zoomInicial: 6
     });
 
-    // ================================================================
-    // ALTERNAR ENTRE LOGIN Y REGISTRO
-    // ================================================================
     document.getElementById('linkRegistro').onclick = (e) => {
       e.preventDefault();
       document.getElementById('loginForm').style.display = 'none';
@@ -121,21 +113,14 @@
       document.getElementById('loginForm').style.display = 'block';
     };
 
-    // ================================================================
-    // GPS EN REGISTRO
-    // ================================================================
     document.getElementById('btnGPS').onclick = () => {
-      if (!navigator.geolocation) {
-        alert('Geolocalización no soportada.');
-        return;
-      }
+      if (!navigator.geolocation) { alert('Geolocalización no soportada.'); return; }
       const btn = document.getElementById('btnGPS');
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buscando...';
       btn.disabled = true;
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const lat = pos.coords.latitude;
-          const lon = pos.coords.longitude;
+          const lat = pos.coords.latitude, lon = pos.coords.longitude;
           if (MapaUbicacion._mapa) {
             MapaUbicacion._mapa.setView([lat, lon], 15);
             MapaUbicacion._colocarMarcador(lat, lon);
@@ -153,9 +138,6 @@
       );
     };
 
-    // ================================================================
-    // REDIRECCIÓN SEGÚN ROL
-    // ================================================================
     function redirigirSegunRol(rol) {
       if (rol === 'super_admin') window.location.href = 'dashboard-admin.html';
       else if (rol === 'refugio') window.location.href = 'dashboard-refugio.html';
@@ -166,51 +148,61 @@
       else window.location.href = 'dashboard-donante.html';
     }
 
-    // ================================================================
-    // LOGIN
-    // ================================================================
     document.getElementById('btnLogin').onclick = async () => {
-  const btn = document.getElementById('btnLogin');
-  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-  const pw = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('btnLogin');
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const pw = document.getElementById('loginPassword').value;
 
-  if (!email.includes('@')) {
-    Mensaje.mostrar('❌ Correo inválido', 'error');
-    return;
-  }
+      if (!email.includes('@')) {
+        Mensaje.mostrar('❌ Correo inválido', 'error');
+        return;
+      }
 
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ingresando...';
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ingresando...';
 
-  try {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-    if (error) throw error;
+      try {
+        const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+        if (error) throw error;
 
-    // apiFetch ya devuelve el JSON parseado, no un Response
-    const perfilData = await apiFetch('/api/perfil', {
-      headers: { Authorization: 'Bearer ' + data.session.access_token }
-    });
+        const perfilData = await apiFetch('/api/perfil', {
+          headers: { Authorization: 'Bearer ' + data.session.access_token }
+        });
 
-    if (!perfilData.success || !perfilData.data || !perfilData.data.rol) {
-      await sb.auth.signOut();
-      throw new Error('Perfil incompleto. No se puede determinar el rol.');
-    }
+        if (!perfilData.success || !perfilData.data || !perfilData.data.rol) {
+          await sb.auth.signOut();
+          throw new Error('Perfil incompleto. No se puede determinar el rol.');
+        }
 
-    setAuth(data.session.access_token, perfilData.data);
-    redirigirSegunRol(perfilData.data.rol);
-  } catch (e) {
-    let textoError = e.message || 'Error desconocido';
-    if (textoError.includes('Invalid login credentials')) textoError = 'Correo o contraseña incorrectos';
-    Mensaje.mostrar('❌ ' + textoError, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = 'Ingresar';
-  }
-};
+        // Generar identificador único de sesión para el control de sesión única
+        const sessionId = crypto.randomUUID();
+        localStorage.setItem('sessionId', sessionId);
+        setAuth(data.session.access_token, perfilData.data);
 
-    // ================================================================
-    // REGISTRO
-    // ================================================================
+        // Actualizar la sesión en la BD para evitar falsos conflictos al iniciar sesión
+                // Actualizar la sesión en la BD y esperar a que termine antes de redirigir
+        if (perfilData.data.rol === 'voluntario') {
+          await fetch(API_BASE + '/api/voluntarios/liberar-sesion', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + data.session.access_token,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ nuevo_session_id: sessionId })
+          }).catch(() => {});
+        }
+
+        redirigirSegunRol(perfilData.data.rol);
+      } catch (e) {
+        let textoError = e.message || 'Error desconocido';
+        if (textoError.includes('Invalid login credentials')) textoError = 'Correo o contraseña incorrectos';
+        Mensaje.mostrar('❌ ' + textoError, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Ingresar';
+      }
+    };
+
     document.getElementById('btnRegistro').onclick = async function() {
       const btn = this;
       btn.disabled = true;
@@ -242,11 +234,7 @@
         if (error) throw error;
 
         const token = data.session.access_token;
-        const perfil = {
-          rol: rol,
-          nombre: nombreInput,
-          telefono: telefonoInput
-        };
+        const perfil = { rol: rol, nombre: nombreInput, telefono: telefonoInput };
 
         const lat = parseFloat(document.getElementById('lat').value);
         const lon = parseFloat(document.getElementById('lon').value);
@@ -257,10 +245,7 @@
 
         const res = await fetch('https://sos-venezuela-backend.onrender.com/api/perfil', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + token
-          },
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
           body: JSON.stringify(perfil)
         });
         if (!res.ok) {
