@@ -1,0 +1,364 @@
+<!-- // @build: 2026-06-30.18-00-00 | id: DON-NUEVA-V5 | desc: Correcciones finales – mapeo de categorías, kilómetros visibles, detalle en carrito -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SOS Venezuela | Donar Ayuda</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="header">
+    <h1>SOS <span>Venezuela</span></h1>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="actualizarUbicacionGPS()" title="Actualizar mi ubicación">
+        <i class="fa-solid fa-location-crosshairs"></i>
+      </button>
+      <button class="icon-btn" onclick="cerrarSesion()" title="Cerrar sesión">
+        <i class="fa-solid fa-right-from-bracket"></i>
+      </button>
+      <div class="user-info">
+        <p>Bienvenido</p>
+        <strong id="donante-nombre">Donante</strong>
+      </div>
+      <div class="avatar" id="donante-avatar">DO</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="mensaje" class="mensaje"></div>
+    <div class="welcome"><h2>Registrar Donación</h2><p>Agrega todos los productos que deseas donar</p></div>
+
+    <!-- PASO 1: Seleccionar productos -->
+    <div id="paso-1">
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-box-open" style="color: var(--accent);"></i> Agregar producto al carrito</div>
+        <div id="contenedor-buscador-donante"></div>
+      </div>
+
+      <div class="carrito-container" id="carrito" style="display:none;">
+        <h3>🛒 Productos a donar <span id="contador-carrito" style="background:var(--danger);color:white;border-radius:50%;padding:2px 10px;font-size:12px;">0</span></h3>
+        <div id="lista-carrito"></div>
+        <button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="CarritoInsumos.vaciar(true)">🗑️ Vaciar carrito</button>
+      </div>
+
+      <button class="btn btn-primary" id="btn-siguiente" disabled onclick="irAlPaso2()">
+        Siguiente → <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+
+    <!-- PASO 2: Datos de entrega -->
+    <div id="paso-2" style="display:none;">
+      <div class="card">
+        <h2>📦 Datos de entrega</h2>
+        <div class="form-group">
+          <label>¿Cómo entregarás la donación?</label>
+          <div class="radio-group" style="display:flex; gap:10px;">
+            <button type="button" class="btn btn-outline active" id="btn-propia" onclick="setModoEntrega('propia')"><i class="fa-solid fa-car"></i> Yo lo llevo</button>
+            <button type="button" class="btn btn-outline" id="btn-recogida" onclick="setModoEntrega('recogida')"><i class="fa-solid fa-truck"></i> Necesito recogida</button>
+          </div>
+        </div>
+
+        <div id="direccion-recogida-group" class="form-group" style="display: none;">
+          <label for="direccion">Dirección de recogida</label>
+          <div class="search-box">
+            <input type="text" id="direccion" placeholder="Calle, urbanización, referencia" autocomplete="off">
+            <div class="search-results" id="resultados-direccion"></div>
+          </div>
+          <div id="mapa-botones-gps"></div>
+          <div class="checkbox-row" id="guardar-ubicacion-container">
+            <input type="checkbox" id="guardar-ubicacion-principal">
+            <label for="guardar-ubicacion-principal">💾 Guardar como mi ubicación principal</label>
+          </div>
+          <div id="mapa-recogida" class="map" style="display:none;"></div>
+          <input type="hidden" id="lat-recogida">
+          <input type="hidden" id="lon-recogida">
+        </div>
+
+        <div class="form-group">
+          <label>Centro de Acopio sugerido</label>
+          <div class="acopio-sugerido" id="acopio-sugerido">
+            <h4><i class="fa-solid fa-location-dot"></i> <span id="acopio-nombre">Cargando...</span></h4>
+            <p id="acopio-distancia"></p>
+          </div>
+          <input type="hidden" id="acopio-id">
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+          <button type="button" class="btn btn-outline" onclick="volverAlPaso1()" style="flex:1;">
+            <i class="fa-solid fa-arrow-left"></i> Volver
+          </button>
+          <button type="button" class="btn btn-primary" id="btn-submit" onclick="enviarDonacion()" style="flex:2;">
+            ❤️ Registrar Donación
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav id="bottom-nav-donante"></nav>
+
+  <!-- MODAL (debe estar antes del script) -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal-contenido"></div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="app.js"></script>
+  <script src="componentes/mensaje.js"></script>
+  <script src="componentes/carrito.js"></script>
+  <script src="componentes/buscador-insumos.js"></script>
+  <script src="componentes/bottom-nav.js"></script>
+  <script src="componentes/mapa-ubicacion.js"></script>
+  <script src="componentes/modal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ================================================================
+    // PROTECCIÓN DE RUTA
+    // ================================================================
+    if (!verificarSesion(['donante'])) throw new Error('Acceso denegado');
+
+    // ================================================================
+    // INICIALIZACIÓN
+    // ================================================================
+    const sb = supabase.createClient('https://kxqwxiolouhrwddaqynp.supabase.co', 'sb_publishable_iJt58cRTDAYH_j_Mv1bJ4g_g0HdRlBF');
+    let modoEntrega = 'propia';
+
+    // Mapeo de categoría al valor aceptado por el backend
+    function mapearTipoAPI(categoria) {
+      const mapa = {
+        'medico': 'medicinas',
+        'alimentos': 'alimentos_no_perecibles',
+        'agua': 'agua_potable',
+        'ropa_calzado': 'ropa',
+        'colchonetas': 'colchonetas',
+        'higiene': 'higiene',
+        'logistica': 'otros'
+      };
+      return mapa[categoria] || 'otros';
+    }
+
+    // Componentes
+    Mensaje.init('mensaje');
+    Modal.init('modal-overlay', 'modal-contenido');
+    BottomNav.init({ contenedorId: 'bottom-nav-donante' });
+
+    CarritoInsumos.init({
+      contenedorId: 'carrito',
+      modo: 'donacion',
+      onChange(items) {
+        document.getElementById('btn-siguiente').disabled = items.length === 0;
+      }
+    });
+
+    BuscadorInsumos.init('contenedor-buscador-donante', {
+      onAgregar(itemData) {
+        CarritoInsumos.agregar({
+          id: itemData.id,
+          nombre: itemData.nombre,
+          cantidad: itemData.cantidad,
+          cantidadOriginal: itemData.cantidadOriginal,
+          unidad: itemData.unidad,
+          categoria: itemData.categoria,
+          detalle: itemData.detalle || '',
+          extra: { ...itemData.extra }
+        });
+      }
+    });
+
+    // Mapa de ubicación (solo se inicializa al llegar al paso 2)
+    let mapaInicializado = false;
+    function initMapaSiNecesario() {
+      if (mapaInicializado) return;
+      MapaUbicacion.init({
+        mapaContenedorId: 'mapa-recogida',
+        inputDireccionId: 'direccion',
+        resultadosDireccionId: 'resultados-direccion',
+        inputLatId: 'lat-recogida',
+        inputLonId: 'lon-recogida',
+        mostrarBotonGPS: true,
+        mostrarGuardarPerfil: true,
+        alSeleccionar: (lat, lon, direccion) => {
+          encontrarAcopioCercano();
+        }
+      });
+      mapaInicializado = true;
+    }
+
+    // ================================================================
+    // IDENTIDAD DEL USUARIO
+    // ================================================================
+    document.getElementById('donante-nombre').textContent = perfil.nombre_punto || 'Donante';
+    document.getElementById('donante-avatar').textContent = (perfil.nombre_punto || 'DO').substring(0, 2).toUpperCase();
+
+    // ================================================================
+    // NAVEGACIÓN ENTRE PASOS
+    // ================================================================
+    function irAlPaso2() {
+      document.getElementById('paso-1').style.display = 'none';
+      document.getElementById('paso-2').style.display = 'block';
+      initMapaSiNecesario();
+
+      // Prellenar coordenadas desde el perfil si no hay nada en los inputs
+      if (!document.getElementById('lat-recogida').value && perfil.lat) {
+        document.getElementById('lat-recogida').value = perfil.lat;
+        document.getElementById('lon-recogida').value = perfil.lon;
+      }
+
+      encontrarAcopioCercano();
+      window.scrollTo(0, 0);
+    }
+
+    function volverAlPaso1() {
+      document.getElementById('paso-2').style.display = 'none';
+      document.getElementById('paso-1').style.display = 'block';
+      window.scrollTo(0, 0);
+    }
+
+    // ================================================================
+    // MODO ENTREGA
+    // ================================================================
+    function setModoEntrega(modo) {
+      modoEntrega = modo;
+      document.getElementById('btn-propia').classList.toggle('active', modo === 'propia');
+      document.getElementById('btn-recogida').classList.toggle('active', modo === 'recogida');
+      const grupo = document.getElementById('direccion-recogida-group');
+      grupo.style.display = modo === 'recogida' ? 'block' : 'none';
+      if (modo === 'recogida') {
+        setTimeout(() => {
+          if (window.L && MapaUbicacion._mapa) MapaUbicacion._mapa.invalidateSize();
+        }, 200);
+      }
+    }
+
+    // ================================================================
+    // ACOPIO CERCANO
+    // ================================================================
+    async function encontrarAcopioCercano() {
+      const lat = perfil.lat || parseFloat(document.getElementById('lat-recogida')?.value);
+      const lon = perfil.lon || parseFloat(document.getElementById('lon-recogida')?.value);
+      if (!lat || !lon) {
+        document.getElementById('acopio-sugerido').innerHTML = '<h4><i class="fa-solid fa-location-dot"></i> <span id="acopio-nombre">📍 Active su ubicación</span></h4>';
+        return;
+      }
+      try {
+        const res = await apiFetch(`/api/perfil/acopios-cercanos?lat=${lat}&lon=${lon}&radio=50`);
+        const acopios = res.data || [];
+        const div = document.getElementById('acopio-sugerido');
+        if (acopios.length) {
+          let s = '<select id="selector-acopios" style="width:100%;padding:8px;margin-bottom:12px;border-radius:8px;border:1px solid var(--border);">';
+          acopios.forEach(a => {
+            const dist = (a.distancia || a.distancia_km) ? Number(a.distancia || a.distancia_km).toFixed(1) : null;
+            const distTexto = dist ? ` (${dist} km)` : '';
+            s += `<option value="${a.user_id}">${a.nombre_punto || 'Acopio'}${distTexto}</option>`;
+          });
+          s += '</select>';
+          
+          let lista = '<div style="max-height:200px; overflow-y:auto; margin-top:8px;">';
+          acopios.forEach(a => {
+            const dist = (a.distancia || a.distancia_km) ? Number(a.distancia || a.distancia_km).toFixed(1) : 'N/A';
+            lista += `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid var(--border); cursor:pointer;"
+                   onclick="document.getElementById('selector-acopios').value='${a.user_id}'; document.getElementById('acopio-id').value='${a.user_id}';">
+                <span><i class="fa-solid fa-location-dot" style="color:var(--accent); margin-right:8px;"></i>${a.nombre_punto || 'Acopio'}</span>
+                <span style="font-weight:700; color:var(--accent);">${dist} km</span>
+              </div>`;
+          });
+          lista += '</div>';
+          
+          div.innerHTML = `<h4 style="margin-bottom:8px;"><i class="fa-solid fa-location-dot" style="color:var(--accent);"></i> Centros de Acopio cercanos</h4>${s}${lista}`;
+          
+          document.getElementById('selector-acopios').addEventListener('change', function() {
+            document.getElementById('acopio-id').value = this.value;
+          });
+          document.getElementById('acopio-id').value = acopios[0].user_id;
+        } else {
+          div.innerHTML = '<h4><i class="fa-solid fa-location-dot"></i> No hay centros de acopio disponibles</h4>';
+        }
+      } catch {}
+    }
+
+    // ================================================================
+    // ENVIAR DONACIÓN
+    // ================================================================
+    async function enviarDonacion() {
+      const items = CarritoInsumos.obtenerItems();
+      if (!items.length) { Mensaje.mostrar('Agregue al menos un producto', 'error'); return; }
+      if (modoEntrega === 'recogida' && !document.getElementById('direccion').value) { Mensaje.mostrar('Ingrese la dirección de recogida', 'error'); return; }
+
+      const btn = document.getElementById('btn-submit');
+      btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
+      try {
+        const selector = document.getElementById('selector-acopios');
+        const nombreAcopio = selector ? selector.options[selector.selectedIndex]?.text?.split(' (')[0] || 'Centro de Acopio' : 'Centro de Acopio';
+
+        const itemsParaEnviar = items.map(i => {
+          const item = {
+            tipo: mapearTipoAPI(i.categoria) || 'otros',
+            detalle: i.nombre,
+            cantidad: Math.round(i.cantidad * 100) / 100,   // ← Redondeo añadido
+            unidad: i.unidad
+          };
+          
+          if (i.detalle) {
+            item.descripcion = i.detalle;
+          }
+          
+          if (i._formula) {
+            item.formula = i._formula;
+          }
+          
+          if (i.extra) {
+            Object.assign(item, i.extra);
+          }
+          
+          return item;
+        });
+
+        const body = {
+          idempotencyKey: crypto.randomUUID(),
+          centro_acopio: { nombre: nombreAcopio, lat: 10.4806, lon: -66.9036 },
+          items: itemsParaEnviar,
+          donante: perfil.nombre_punto || 'Donante'
+        };
+        
+        if (modoEntrega === 'recogida') {
+          body.modo_entrega = 'recogida';
+          body.direccion_recogida = document.getElementById('direccion').value;
+          body.lat_recogida = document.getElementById('lat-recogida').value || null;
+          body.lon_recogida = document.getElementById('lon-recogida').value || null;
+        }
+
+        const res = await apiFetch('/api/donaciones', { method: 'POST', body: JSON.stringify(body) });
+        Mensaje.mostrar('✅ Donación registrada. ID: ' + res.data.id, 'exito');
+        document.getElementById('direccion').value = '';
+        CarritoInsumos.vaciar(true);
+        volverAlPaso1();
+      } catch (err) {
+        Mensaje.mostrar('❌ ' + err.message, 'error');
+      } finally {
+        btn.disabled = false; btn.innerHTML = '❤️ Registrar Donación';
+      }
+    }
+
+    async function actualizarUbicacionGPS() {
+      if (!navigator.geolocation) { Mensaje.mostrar('GPS no soportado', 'error'); return; }
+      navigator.geolocation.getCurrentPosition(async pos => {
+        const lat = pos.coords.latitude, lon = pos.coords.longitude;
+        try {
+          await apiFetch('/api/perfil', { method: 'POST', body: JSON.stringify({ rol: perfil.rol, nombre: perfil.nombre_punto || perfil.nombre, telefono: perfil.telefono || '', lat, lon }) });
+          perfil.lat = lat; perfil.lon = lon;
+          Mensaje.mostrar('📍 Ubicación actualizada', 'exito');
+        } catch (e) { Mensaje.mostrar('❌ Error', 'error'); }
+      }, () => { Mensaje.mostrar('No se pudo obtener ubicación', 'error'); }, { enableHighAccuracy: true, timeout: 10000 });
+    }
+
+    function cerrarSesion() { if (confirm('¿Cerrar sesión?')) { logout(); } }
+  </script>
+</body>
+</html>

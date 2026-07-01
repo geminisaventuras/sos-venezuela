@@ -1,0 +1,77 @@
+<!-- // @build: 2026-06-30.05-40-00 | id: DON-PERFIL-V2 | desc: Página de perfil del donante – refactorizada con componentes y estilos unificados -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SOS Venezuela | Mi Perfil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="header">
+    <h1>SOS <span>Venezuela</span></h1>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="actualizarUbicacionGPS()" title="Actualizar mi ubicación"><i class="fa-solid fa-location-crosshairs"></i></button>
+      <button class="icon-btn" onclick="cerrarSesion()" title="Cerrar sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
+      <div class="user-info"><p>Bienvenido</p><strong id="donante-nombre">Donante</strong></div>
+      <div class="avatar" id="donante-avatar">DO</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="mensaje" class="mensaje"></div>
+    <div class="welcome"><h2>Mi Perfil</h2><p>Tus datos de contacto y ubicación principal</p></div>
+    <div class="card">
+      <div class="form-group"><label>Nombre</label><input type="text" id="perfil-nombre" readonly></div>
+      <div class="form-group"><label>Correo electrónico</label><input type="email" id="perfil-email" readonly></div>
+      <div class="form-group"><label>Teléfono</label><input type="tel" id="perfil-telefono" readonly></div>
+      <div class="form-group"><label>📍 Ubicación principal</label><input type="text" id="perfil-ubicacion" readonly placeholder="No configurada"></div>
+      <button class="btn btn-success" onclick="cerrarSesion()" style="margin-top:20px;"><i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</button>
+    </div>
+  </div>
+
+  <nav id="bottom-nav-donante"></nav>
+
+  <script src="app.js"></script>
+  <script src="componentes/mensaje.js"></script>
+  <script src="componentes/bottom-nav.js"></script>
+  <script>
+    if (!verificarSesion(['donante'])) throw new Error('Acceso denegado');
+BottomNav.init({ contenedorId: 'bottom-nav-donante' });    document.getElementById('donante-nombre').textContent = perfil.nombre_punto || 'Donante';
+    document.getElementById('donante-avatar').textContent = (perfil.nombre_punto || 'DO').substring(0, 2).toUpperCase();
+
+    async function cargarPerfil() {
+  try {
+    const res = await apiFetch('/api/perfil');
+    const perfilData = res.data;
+    if (perfilData) {
+      document.getElementById('perfil-nombre').value = perfilData.nombre_punto || '';
+      document.getElementById('perfil-telefono').value = perfilData.telefono || '';
+      document.getElementById('perfil-ubicacion').value = perfilData.direccion_exacta || (perfilData.lat ? `${perfilData.lat}, ${perfilData.lon}` : 'No configurada');
+    }
+    // Obtener email desde la sesión de Supabase
+    const { data: sessionData } = await sb.auth.getSession();
+    document.getElementById('perfil-email').value = sessionData?.session?.user?.email || '';
+  } catch(e) {
+    Mensaje.mostrar('❌ Error al cargar perfil','error');
+  }
+}
+
+    async function actualizarUbicacionGPS() {
+      if (!navigator.geolocation) { Mensaje.mostrar('GPS no soportado','error'); return; }
+      navigator.geolocation.getCurrentPosition(async pos => {
+        const lat=pos.coords.latitude, lon=pos.coords.longitude;
+        try { await apiFetch('/api/perfil', { method:'POST', body: JSON.stringify({ rol:perfil.rol, nombre:perfil.nombre_punto||perfil.nombre, telefono:perfil.telefono||'', lat, lon }) }); perfil.lat=lat; perfil.lon=lon; Mensaje.mostrar('📍 Ubicación actualizada','exito'); cargarPerfil(); }
+        catch(e) { Mensaje.mostrar('❌ Error','error'); }
+      }, () => { Mensaje.mostrar('No se pudo obtener ubicación','error'); }, { enableHighAccuracy:true, timeout:10000 });
+    }
+
+    function cerrarSesion() { if (confirm('¿Cerrar sesión?')) { logout(); } }
+
+    cargarPerfil();
+  </script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!-- // @build: 2026-06-30.18-30-00 | id: DON-HISTORIAL-V5 | desc: Historial muestra detalle amigable sin importar el formato, contador de unidades corregido -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SOS Venezuela | Mis Donaciones</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="header">
+    <h1>SOS <span>Venezuela</span></h1>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="cerrarSesion()" title="Cerrar sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
+      <div class="user-info"><p>Bienvenido</p><strong id="donante-nombre">Donante</strong></div>
+      <div class="avatar" id="donante-avatar">DO</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="mensaje" class="mensaje"></div>
+    <div class="welcome"><h2>Mis Donaciones</h2><p>Historial y trazabilidad de tu ayuda</p></div>
+    <div class="form-group" style="margin-bottom:15px;">
+      <select id="filtro-estado" onchange="filtrarDonaciones(this.value)" style="width:100%;">
+        <option value="activas">🟢 Activas</option>
+        <option value="completadas">✅ Completadas</option>
+        <option value="canceladas">❌ Canceladas</option>
+        <option value="todas">📋 Todas</option>
+      </select>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon" style="background:#eff6ff;color:var(--accent);"><i class="fa-solid fa-box-open"></i></div><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total Donadas</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#ecfdf5;color:var(--success);"><i class="fa-solid fa-people-group"></i></div><div class="stat-value" id="stat-impacto">0</div><div class="stat-label">Ítems Donados</div></div>
+    </div>
+    <div id="lista-donaciones"><div class="loading">Cargando historial...</div></div>
+    <div class="paginacion" id="paginacion" style="display:none;"></div>
+  </div>
+
+  <nav id="bottom-nav-donante"></nav>
+
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal-contenido"></div>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="componentes/mensaje.js"></script>
+  <script src="componentes/bottom-nav.js"></script>
+  <script src="componentes/modal.js"></script>
+  <script>
+    if (!verificarSesion(['donante'])) throw new Error('Acceso denegado');
+    BottomNav.init({ contenedorId: 'bottom-nav-donante' });
+    Mensaje.init('mensaje');
+    Modal.init('modal-overlay', 'modal-contenido');
+    document.getElementById('donante-nombre').textContent = perfil.nombre_punto || 'Donante';
+    document.getElementById('donante-avatar').textContent = (perfil.nombre_punto || 'DO').substring(0, 2).toUpperCase();
+
+    let filtroEstado = 'activas', paginaActual = 1;
+    const ITEMS_POR_PAGINA = 5;
+
+    async function cargarHistorial() {
+      const lista = document.getElementById('lista-donaciones');
+      lista.innerHTML = '<div class="loading">Cargando...</div>';
+      try {
+        const res = await apiFetch('/api/donaciones/historial');
+        const donaciones = res.data || [];
+        let donacionesFiltradas = donaciones;
+        if (filtroEstado === 'activas') donacionesFiltradas = donaciones.filter(d => ['ofrecida','asignada','en_transito_a_acopio'].includes(d.estado));
+        else if (filtroEstado === 'completadas') donacionesFiltradas = donaciones.filter(d => ['recibida','entregada','distribuida','totalmente_rechazada'].includes(d.estado));
+        else if (filtroEstado === 'canceladas') donacionesFiltradas = donaciones.filter(d => ['cancelada'].includes(d.estado));
+
+        if (!donacionesFiltradas.length) {
+          lista.innerHTML = '<div class="empty-state"><i class="fa-solid fa-box-open" style="font-size:48px;opacity:0.3;"></i><p style="margin-top:15px;">No hay donaciones en esta categoría</p></div>';
+          document.getElementById('paginacion').style.display = 'none';
+          document.getElementById('stat-total').textContent = 0;
+          document.getElementById('stat-impacto').textContent = 0;
+          return;
+        }
+
+        const activas = donaciones.filter(d => d.estado !== 'cancelada');
+        document.getElementById('stat-total').textContent = activas.length;
+
+        // Cálculo de impacto: prioriza unidades desde el detalle
+        let impactoTotal = 0;
+        activas.forEach(d => {
+          d.detalle_donacion?.forEach(det => {
+            if (det.detalle) {
+              const match = det.detalle.match(/=\s*(\d+)\s+unidades/);
+              if (match) {
+                impactoTotal += parseInt(match[1]);
+                return;
+              }
+            }
+            impactoTotal += det.cantidad || 0;
+          });
+        });
+        document.getElementById('stat-impacto').textContent = impactoTotal;
+
+        const totalPaginas = Math.ceil(donacionesFiltradas.length / ITEMS_POR_PAGINA);
+        if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+        if (paginaActual < 1) paginaActual = 1;
+        const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+        const paginaDonaciones = donacionesFiltradas.slice(inicio, inicio + ITEMS_POR_PAGINA);
+
+        lista.innerHTML = paginaDonaciones.map(d => {
+          // Construir descripción de productos priorizando detalle amigable
+          const productos = d.detalle_donacion?.map(det => {
+            const insumoNombre = det.catalogo_items?.nombre_generico || 'Insumo';
+            if (det.detalle && det.detalle.length > 0) {
+              return `<strong>${insumoNombre}</strong><br><span style="color:var(--text-muted); font-size:13px;">${det.detalle}</span>`;
+            }
+            const cantidadRedondeada = parseFloat(det.cantidad).toFixed(2);
+            return `<strong>${cantidadRedondeada} ${det.unidad || 'unidades'}</strong> de ${insumoNombre}`;
+          }).join('<hr style="border:0; border-top:1px dashed var(--border); margin:8px 0;">') || 'Sin productos';
+
+          const estadoClass = d.estado === 'recibida'||d.estado==='distribuida'||d.estado==='entregada' ? 'badge-recibida' : d.estado==='cancelada'||d.estado==='totalmente_rechazada' ? 'badge-cancelada' : d.estado==='asignada'||d.estado==='en_transito_a_acopio' ? 'badge-en_transito' : 'badge-ofrecida';
+          let tl = '<div class="timeline" style="margin-top:15px;padding-top:15px;border-top:1px solid var(--border);">';
+          tl += `<div class="timeline-item completed"><div class="timeline-title">Donación registrada</div><div class="timeline-date">${new Date(d.creado_en).toLocaleString('es-VE')}</div></div>`;
+          if (['asignada','en_transito_a_acopio','recibida','distribuida','entregada'].includes(d.estado)) tl += `<div class="timeline-item completed"><div class="timeline-title">Transportista asignado</div><div class="timeline-date">${d.voluntario_recoleccion_id?'Asignado':'Pendiente'}</div></div>`;
+          if (['en_transito_a_acopio','recibida','distribuida','entregada'].includes(d.estado)) tl += `<div class="timeline-item completed"><div class="timeline-title">Recogida confirmada</div><div class="timeline-date">${d.fecha_recibida?new Date(d.fecha_recibida).toLocaleString('es-VE'):'En proceso'}</div></div>`;
+          if (['recibida','distribuida','entregada'].includes(d.estado)) tl += `<div class="timeline-item completed"><div class="timeline-title">Recibida en acopio</div><div class="timeline-date">${d.fecha_recibida?new Date(d.fecha_recibida).toLocaleString('es-VE'):'N/A'}</div></div>`;
+          if (['distribuida','entregada'].includes(d.estado)) tl += `<div class="timeline-item completed"><div class="timeline-title">Despachada a punto de ayuda</div><div class="timeline-date">${new Date(d.creado_en).toLocaleString('es-VE')}</div></div>`;
+          if (d.estado==='cancelada'||d.estado==='totalmente_rechazada') tl += `<div class="timeline-item pending"><div class="timeline-title">${d.estado==='cancelada'?'Cancelada':'Rechazada'}</div><div class="timeline-date">${new Date(d.creado_en).toLocaleString('es-VE')}</div></div>`;
+          tl += '</div>';
+          const acciones = d.estado === 'ofrecida' ? `<div class="action-buttons" style="display:flex;gap:8px;margin-top:10px;"><button class="btn btn-warning" onclick="modificarDonacion('${d.id}')">✏️ Modificar</button><button class="btn btn-danger" onclick="cancelarDonacion('${d.id}')">🗑️ Cancelar</button></div>` : '';
+
+          return `
+            <div class="donacion-item" style="background:white; padding:15px; border-radius:8px; margin-bottom:15px; border:1px solid var(--border);">
+              <div class="donacion-header" style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                <div class="donacion-title" style="font-size:15px; line-height:1.4;">${productos}</div>
+                <span class="badge ${estadoClass}">${d.estado.replace(/_/g,' ')}</span>
+              </div>
+              <div class="donacion-detail">Acopio: ${d.acopio_destino?.nombre_punto||'Asignado'}</div>
+              <div class="donacion-detail">Fecha: ${new Date(d.creado_en).toLocaleDateString('es-VE')}</div>
+              ${tl}
+              ${acciones}
+              <button class="btn btn-primary" style="margin-top:10px;" onclick="verTrazabilidad('${d.id}')">🔍 Ver trazabilidad</button>
+            </div>
+          `;
+        }).join('');
+
+        const paginacionDiv = document.getElementById('paginacion');
+        if (totalPaginas > 1) { paginacionDiv.style.display = 'flex'; paginacionDiv.innerHTML = `<button class="btn btn-outline btn-sm" ${paginaActual===1?'disabled':''} onclick="cambiarPagina(-1)">← Anterior</button><span>Página ${paginaActual} de ${totalPaginas}</span><button class="btn btn-outline btn-sm" ${paginaActual===totalPaginas?'disabled':''} onclick="cambiarPagina(1)">Siguiente →</button>`; }
+        else { paginacionDiv.style.display = 'none'; }
+      } catch { lista.innerHTML = '<div class="empty-state"><p style="color:var(--danger);">Error al cargar historial</p></div>'; }
+    }
+
+    function filtrarDonaciones(estado) { filtroEstado = estado; paginaActual = 1; cargarHistorial(); }
+    function cambiarPagina(dir) { paginaActual += dir; cargarHistorial(); }
+
+    window.modificarDonacion = function(id) {
+      Modal.abrir(`
+        <h3>Modificar donación</h3>
+        <p style="color:var(--text-muted); margin-bottom:12px;">Solo puedes cambiar la cantidad. El insumo no se modifica.</p>
+        <div class="form-group">
+          <label>Nueva cantidad</label>
+          <input type="number" id="mod-cantidad" min="1" required>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:16px;">
+          <button id="modal-guardar-mod" class="btn btn-primary" style="flex:1;">Guardar</button>
+          <button id="modal-cancelar-mod" class="btn btn-outline" style="flex:1;">Cancelar</button>
+        </div>
+      `);
+      document.getElementById('modal-guardar-mod').onclick = async () => {
+        const cantidad = parseInt(document.getElementById('mod-cantidad').value);
+        if (!cantidad || cantidad <= 0) { alert('Cantidad inválida'); return; }
+        try {
+          await apiFetch('/api/donaciones/' + id, { method: 'PATCH', body: JSON.stringify({ cantidad }) });
+          Mensaje.mostrar('✅ Donación modificada', 'exito');
+          cargarHistorial();
+        } catch (e) { Mensaje.mostrar('❌ ' + e.message, 'error'); }
+        Modal.cerrar();
+      };
+      document.getElementById('modal-cancelar-mod').onclick = () => Modal.cerrar();
+    };
+
+    window.cancelarDonacion = async function(id) {
+      if (!confirm('¿Cancelar esta donación?')) return;
+      try { await apiFetch('/api/donaciones/' + id + '/cancelar', { method:'PATCH' }); Mensaje.mostrar('✅ Donación cancelada','exito'); cargarHistorial(); }
+      catch(e) { Mensaje.mostrar('❌ '+e.message,'error'); }
+    };
+
+    window.verTrazabilidad = async function(id) {
+      try {
+        const data = await apiFetch('/api/donaciones/' + id + '/trazabilidad');
+        if (!data.success) throw new Error(data.error?.message||'Error');
+        const t = data.data;
+        let mensaje = `📦 Trazabilidad\n\nInsumos: ${t.insumos.map(i=>i.cantidad+' '+i.unidad+' de '+i.nombre).join(', ')}\nEstado: ${t.estado_actual}\n\nLínea de tiempo:\n`;
+        t.timeline.forEach(item => { mensaje += `• ${new Date(item.fecha).toLocaleString('es-VE')}: ${item.descripcion}\n`; });
+        if (t.despachos?.length) { mensaje += '\n📦 Despachos:\n'; t.despachos.forEach(d => { mensaje += `• A ${d.destino} (${d.tipo_destino}) - ${d.estado}\n`; }); }
+        alert(mensaje);
+      } catch(e) { alert('Error: '+e.message); }
+    };
+
+    function cerrarSesion() { if (confirm('¿Cerrar sesión?')) { logout(); } }
+
+    cargarHistorial();
+  </script>
+</body>
+</html>
